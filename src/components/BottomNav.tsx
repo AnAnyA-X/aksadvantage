@@ -29,7 +29,7 @@ export function BottomNav() {
                     : "text-muted-foreground group-hover:text-foreground")
                 }
               >
-                <Icon className="h-4.5 w-4.5" strokeWidth={2.25} />
+                <Icon className="h-[18px] w-[18px]" strokeWidth={2.25} />
               </div>
               <span
                 className={
