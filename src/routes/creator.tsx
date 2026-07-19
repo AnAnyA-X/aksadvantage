@@ -149,9 +149,13 @@ function Creator() {
       <section className="relative z-10 px-5 pt-6">
         <div className="mb-3 flex items-center justify-between">
           <h2 className="font-display text-lg font-semibold tracking-tight">Your projects</h2>
-          <button className="inline-flex items-center gap-1.5 rounded-full bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground">
+          <button
+            onClick={() => setSubmitOpen(true)}
+            className="inline-flex items-center gap-1.5 rounded-full bg-primary px-3 py-1.5 text-xs font-semibold text-primary-foreground"
+          >
             <Plus className="h-3.5 w-3.5" /> New
           </button>
+
         </div>
 
         <div className="space-y-3">
