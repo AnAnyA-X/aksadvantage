@@ -137,11 +137,11 @@ function Learn() {
         style={{ scrollbarWidth: "none" }}
       >
         {reels.map((r, i) => (
-          <>
+          <Fragment key={r.creator}>
             <article
-              key={r.creator}
               className="relative flex h-screen w-full snap-start items-end overflow-hidden"
             >
+
 
             <div className={`absolute inset-0 bg-gradient-to-br ${r.hue}`} />
             <div className="absolute inset-0 grid-bg opacity-30" />
