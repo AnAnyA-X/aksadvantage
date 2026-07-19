@@ -21,8 +21,31 @@ const projects = [
   { title: "mini-gpt", status: "Draft", views: "—", likes: "—", stack: ["PyTorch"], hue: "var(--magenta)" },
 ];
 
+const mockRepos = [
+  { name: "y-canvas", desc: "Realtime collaborative canvas", stars: 214, lang: "TypeScript", visibility: "Public" },
+  { name: "offline-todo", desc: "Local-first PWA todo app", stars: 88, lang: "TypeScript", visibility: "Public" },
+  { name: "mini-gpt", desc: "Tiny transformer from scratch", stars: 41, lang: "Python", visibility: "Public" },
+  { name: "rusty-shell", desc: "POSIX-ish shell in Rust", stars: 17, lang: "Rust", visibility: "Private" },
+  { name: "leetcode-notes", desc: "Personal problem log", stars: 3, lang: "Markdown", visibility: "Private" },
+];
+
+const difficulties = ["Noob", "Intermediate", "Job-Level"] as const;
+
 function Creator() {
+  const [connected, setConnected] = useState(false);
+  const [connecting, setConnecting] = useState(false);
+  const [submitOpen, setSubmitOpen] = useState(false);
+
+  const handleConnect = () => {
+    setConnecting(true);
+    setTimeout(() => {
+      setConnected(true);
+      setConnecting(false);
+    }, 1100);
+  };
+
   return (
+
     <div className="min-h-screen pb-28">
       <div className="pointer-events-none absolute inset-x-0 top-0 h-64 bg-gradient-to-b from-[color:var(--cyan)]/15 to-transparent" />
 
