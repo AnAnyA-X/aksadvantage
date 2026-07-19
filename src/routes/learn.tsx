@@ -256,3 +256,99 @@ function ActionBtn({
     </button>
   );
 }
+
+function EduBanner({ ad }: { ad: (typeof eduAds)[number] }) {
+  return (
+    <section className="relative flex h-screen w-full snap-start items-center justify-center bg-[#faf7f0] px-5 py-10 text-neutral-900">
+      {/* Paper texture / notebook lines */}
+      <div
+        className="pointer-events-none absolute inset-0 opacity-[0.08]"
+        style={{
+          backgroundImage:
+            "repeating-linear-gradient(0deg, transparent 0 27px, #1a1a1a 27px 28px)",
+        }}
+      />
+      <div className="pointer-events-none absolute left-10 top-0 bottom-0 w-px bg-rose-400/40" />
+
+      <div className="relative w-full max-w-sm">
+        {/* Sponsored strip */}
+        <div className="mb-4 flex items-center justify-between">
+          <span className="inline-flex items-center gap-1.5 rounded-sm border border-neutral-900/20 bg-white/70 px-2 py-1 font-mono text-[10px] uppercase tracking-[0.18em] text-neutral-700 backdrop-blur">
+            <BookOpen className="h-3 w-3" />
+            Sponsored · Educational
+          </span>
+          <span className="font-mono text-[10px] uppercase tracking-widest text-neutral-500">
+            Ad-break 01
+          </span>
+        </div>
+
+        {/* Card */}
+        <article
+          className="relative overflow-hidden rounded-lg border-2 border-neutral-900 bg-white p-6 shadow-[8px_8px_0_0_#171717]"
+        >
+          <div
+            className="absolute inset-x-0 top-0 h-1.5"
+            style={{ background: ad.accent }}
+          />
+
+          <div className="flex items-center gap-2">
+            <div
+              className="grid h-9 w-9 place-items-center rounded-md border-2 border-neutral-900"
+              style={{ background: ad.accent }}
+            >
+              <GraduationCap className="h-5 w-5 text-neutral-900" />
+            </div>
+            <div>
+              <p className="font-mono text-[10px] uppercase tracking-widest text-neutral-500">
+                Course · {ad.provider}
+              </p>
+              <p className="font-display text-sm font-semibold">{ad.provider}</p>
+            </div>
+          </div>
+
+          <h3 className="mt-5 font-display text-2xl font-semibold leading-[1.1] tracking-tight text-neutral-900">
+            {ad.course}
+          </h3>
+          <p className="mt-2 text-sm text-neutral-600">{ad.tagline}</p>
+
+          {/* Meta grid */}
+          <dl className="mt-5 grid grid-cols-3 gap-2 border-y-2 border-dashed border-neutral-200 py-4">
+            <MetaItem icon={Clock} label="Length" value={ad.duration} />
+            <MetaItem icon={BookOpen} label="Level" value={ad.level} />
+            <MetaItem icon={Award} label="Cert" value="Yes" />
+          </dl>
+
+          <p className="mt-3 flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest text-neutral-500">
+            <Award className="h-3 w-3" />
+            {ad.cert}
+          </p>
+
+          <button className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-md border-2 border-neutral-900 bg-neutral-900 px-4 py-3 font-display text-sm font-semibold text-white transition active:translate-x-[2px] active:translate-y-[2px] active:shadow-none">
+            Enroll — Continue learning
+          </button>
+
+          <p className="mt-3 text-center font-mono text-[10px] text-neutral-400">
+            Educational placement · no tracking pixels
+          </p>
+        </article>
+
+        <p className="mt-4 text-center font-mono text-[10px] uppercase tracking-widest text-neutral-500">
+          Swipe up to keep watching
+        </p>
+      </div>
+    </section>
+  );
+}
+
+function MetaItem({ icon: Icon, label, value }: { icon: typeof Clock; label: string; value: string }) {
+  return (
+    <div>
+      <div className="flex items-center gap-1 font-mono text-[9px] uppercase tracking-widest text-neutral-500">
+        <Icon className="h-3 w-3" />
+        {label}
+      </div>
+      <p className="mt-1 font-display text-xs font-semibold leading-tight text-neutral-900">{value}</p>
+    </div>
+  );
+}
+
