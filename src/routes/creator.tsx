@@ -107,12 +107,13 @@ function Creator() {
                       {p.status}
                     </span>
                   </div>
-                  <div className="mt-1 flex flex-wrap gap-1">
-                    {p.stack.map((s) => (
+                  <div className="mt-1 flex flex-wrap items-center gap-x-1.5">
+                    {p.stack.map((s, i) => (
                       <span key={s} className="font-mono text-[10px] text-muted-foreground">
+                        {i > 0 ? <span className="mr-1.5 opacity-50">·</span> : null}
                         {s}
                       </span>
-                    )).reduce((acc: React.ReactNode[], el, i) => acc.concat(i > 0 ? [<span key={`d${i}`} className="font-mono text-[10px] text-muted-foreground">·</span>, el] : [el]), [])}
+                    ))}
                   </div>
                   <div className="mt-2 flex items-center gap-4 text-xs text-muted-foreground">
                     <span className="inline-flex items-center gap-1"><Eye className="h-3 w-3" /> {p.views}</span>
