@@ -223,6 +223,11 @@ function Creator() {
       </section>
 
       <BottomNav />
+
+      {submitOpen && (
+        <SubmitModal connected={connected} onClose={() => setSubmitOpen(false)} onConnect={handleConnect} connecting={connecting} />
+      )}
+
     </div>
   );
 }
