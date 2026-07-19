@@ -65,6 +65,58 @@ function Creator() {
         </div>
       </header>
 
+      {/* Secure login / GitHub connection */}
+      <section className="relative z-10 px-5 pt-6">
+        <div className="relative overflow-hidden rounded-2xl border border-border/60 bg-surface/70 p-5 backdrop-blur">
+          <div className="pointer-events-none absolute -right-10 -top-10 h-32 w-32 rounded-full bg-[color:var(--lime)]/10 blur-2xl" />
+          <div className="flex items-center gap-2">
+            <Lock className="h-3.5 w-3.5 text-muted-foreground" />
+            <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+              Secure login
+            </p>
+          </div>
+
+          {connected ? (
+            <div className="mt-3 flex items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="grid h-10 w-10 place-items-center rounded-xl bg-foreground text-background">
+                  <Github className="h-5 w-5" />
+                </div>
+                <div>
+                  <p className="font-display text-sm font-semibold">Connected as @mia-dev</p>
+                  <p className="font-mono text-[10px] text-muted-foreground">
+                    OAuth scope: repo:read · verified
+                  </p>
+                </div>
+              </div>
+              <span className="inline-flex items-center gap-1 rounded-full bg-primary/15 px-2 py-1 font-mono text-[10px] font-medium text-primary">
+                <Check className="h-3 w-3" /> Verified
+              </span>
+            </div>
+          ) : (
+            <>
+              <h2 className="mt-2 font-display text-lg font-semibold tracking-tight">
+                Sign in to submit projects
+              </h2>
+              <p className="mt-1 text-sm text-muted-foreground">
+                We authenticate creators via GitHub OAuth. URLs cannot be pasted manually —
+                only your own verified repositories can be submitted.
+              </p>
+              <button
+                onClick={handleConnect}
+                disabled={connecting}
+                className="mt-4 inline-flex w-full items-center justify-center gap-2 rounded-xl bg-foreground px-4 py-3 text-sm font-semibold text-background transition active:scale-[0.99] disabled:opacity-60"
+              >
+                <Github className="h-4 w-4" />
+                {connecting ? "Redirecting to GitHub…" : "Connect with GitHub"}
+              </button>
+            </>
+          )}
+        </div>
+      </section>
+
+
+
       {/* Stats */}
       <section className="relative z-10 px-5 pt-6">
         <div className="grid grid-cols-2 gap-3">
