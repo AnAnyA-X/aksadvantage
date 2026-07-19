@@ -1,6 +1,7 @@
 import { createFileRoute } from "@tanstack/react-router";
+import { useState } from "react";
 import { BottomNav } from "@/components/BottomNav";
-import { Eye, Heart, GitBranch, TrendingUp, Plus, MoreHorizontal, Play } from "lucide-react";
+import { Eye, Heart, GitBranch, TrendingUp, Plus, MoreHorizontal, Play, Github, Lock, Check, ChevronDown, ShieldCheck, Star, X } from "lucide-react";
 
 export const Route = createFileRoute("/creator")({
   head: () => ({
