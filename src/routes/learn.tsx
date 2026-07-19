@@ -1,5 +1,5 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { Heart, MessageCircle, Share2, Bookmark, Music2, Play, Search } from "lucide-react";
+import { Heart, Share2, Flag, Github, Music2, Play, Search, ShieldCheck } from "lucide-react";
 import { BottomNav } from "@/components/BottomNav";
 
 export const Route = createFileRoute("/learn")({
@@ -14,32 +14,55 @@ export const Route = createFileRoute("/learn")({
   component: Learn,
 });
 
-const reels = [
+type Difficulty = "Noob" | "Intermediate" | "Job-Level";
+
+const reels: {
+  creator: string;
+  project: string;
+  caption: string;
+  stack: string[];
+  difficulty: Difficulty;
+  repo: string;
+  stats: { likes: string; shares: number };
+  hue: string;
+}[] = [
   {
     creator: "@mia.builds",
     project: "Realtime whiteboard with Y.js",
     caption: "Built a collaborative canvas in a weekend. CRDTs are wild.",
-    tags: ["#yjs", "#collab", "#weekend-hack"],
-    stats: { likes: "12.4k", comments: 284, shares: 91 },
+    stack: ["React", "Y.js", "WebRTC", "TypeScript"],
+    difficulty: "Intermediate",
+    repo: "mia-builds/yjs-whiteboard",
+    stats: { likes: "12.4k", shares: 91 },
     hue: "from-[color:var(--lime)]/40 via-transparent to-[color:var(--cyan)]/30",
   },
   {
     creator: "@devon.codes",
     project: "Local-first todo, no backend",
     caption: "SQLite in the browser + service worker. Offline, forever.",
-    tags: ["#local-first", "#sqlite", "#pwa"],
-    stats: { likes: "8.9k", comments: 190, shares: 44 },
+    stack: ["SQLite", "PWA", "Vite"],
+    difficulty: "Noob",
+    repo: "devon-codes/local-todo",
+    stats: { likes: "8.9k", shares: 44 },
     hue: "from-[color:var(--magenta)]/40 via-transparent to-[color:var(--lime)]/25",
   },
   {
     creator: "@sana.ml",
     project: "Tiny transformer in 200 lines",
     caption: "Karpathy-style, trained on shakespeare on my M1 in an hour.",
-    tags: ["#ml", "#transformers", "#from-scratch"],
-    stats: { likes: "22.1k", comments: 512, shares: 320 },
+    stack: ["Python", "PyTorch", "CUDA"],
+    difficulty: "Job-Level",
+    repo: "sana-ml/nano-transformer",
+    stats: { likes: "22.1k", shares: 320 },
     hue: "from-[color:var(--cyan)]/35 via-transparent to-[color:var(--magenta)]/30",
   },
 ];
+
+const difficultyStyles: Record<Difficulty, string> = {
+  Noob: "bg-[color:var(--lime)]/20 text-[color:var(--lime)] border-[color:var(--lime)]/40",
+  Intermediate: "bg-[color:var(--cyan)]/20 text-[color:var(--cyan)] border-[color:var(--cyan)]/40",
+  "Job-Level": "bg-[color:var(--magenta)]/20 text-[color:var(--magenta)] border-[color:var(--magenta)]/40",
+};
 
 function Learn() {
   return (
@@ -79,24 +102,51 @@ function Learn() {
             </div>
 
             {/* Bottom info */}
-            <div className="relative z-10 flex w-full items-end justify-between gap-4 p-5 pb-24 text-white">
+            <div className="relative z-10 flex w-full items-end justify-between gap-3 p-5 pb-24 text-white">
               <div className="min-w-0 flex-1">
                 <p className="font-mono text-xs text-white/70">{r.creator}</p>
-                <h2 className="mt-1 font-display text-xl font-semibold leading-tight tracking-tight text-balance">
+
+                <div className="mt-2 flex items-center gap-2">
+                  <span
+                    className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 font-mono text-[10px] uppercase tracking-wide backdrop-blur ${difficultyStyles[r.difficulty]}`}
+                  >
+                    <span className="h-1.5 w-1.5 rounded-full bg-current" />
+                    {r.difficulty}
+                  </span>
+                </div>
+
+                <h2 className="mt-2 font-display text-xl font-semibold leading-tight tracking-tight text-balance">
                   {r.project}
                 </h2>
                 <p className="mt-1 text-sm text-white/80">{r.caption}</p>
+
                 <div className="mt-3 flex flex-wrap gap-1.5">
-                  {r.tags.map((t) => (
-                    <span key={t} className="rounded-full bg-white/10 px-2 py-0.5 font-mono text-[10px] text-white/80 backdrop-blur">
+                  {r.stack.map((t) => (
+                    <span
+                      key={t}
+                      className="rounded-md border border-white/15 bg-white/10 px-2 py-0.5 font-mono text-[10px] text-white/90 backdrop-blur"
+                    >
                       {t}
                     </span>
                   ))}
                 </div>
+
                 <div className="mt-3 flex items-center gap-2 text-xs text-white/70">
                   <Music2 className="h-3.5 w-3.5" />
                   <span className="truncate">original sound — {r.creator}</span>
                 </div>
+
+                {/* Prominent CTA */}
+                <a
+                  href={`https://github.com/${r.repo}`}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mt-4 inline-flex items-center gap-2 rounded-full bg-[color:var(--lime)] px-4 py-2.5 font-display text-sm font-semibold text-[color:var(--primary-foreground)] shadow-[0_0_0_1px_rgba(255,255,255,0.15),0_10px_30px_-10px_rgba(163,255,80,0.6)] transition-transform active:scale-[0.98]"
+                >
+                  <Github className="h-4 w-4" />
+                  View Verified GitHub Code
+                  <ShieldCheck className="h-4 w-4 opacity-80" />
+                </a>
               </div>
 
               <aside className="flex flex-col items-center gap-5 text-white">
@@ -111,9 +161,8 @@ function Learn() {
                   </span>
                 </div>
                 <ActionBtn icon={Heart} label={r.stats.likes} />
-                <ActionBtn icon={MessageCircle} label={String(r.stats.comments)} />
-                <ActionBtn icon={Bookmark} label="Save" />
                 <ActionBtn icon={Share2} label={String(r.stats.shares)} />
+                <ActionBtn icon={Flag} label="Report" tone="danger" />
               </aside>
             </div>
           </article>
@@ -125,10 +174,24 @@ function Learn() {
   );
 }
 
-function ActionBtn({ icon: Icon, label }: { icon: typeof Heart; label: string }) {
+function ActionBtn({
+  icon: Icon,
+  label,
+  tone = "default",
+}: {
+  icon: typeof Heart;
+  label: string;
+  tone?: "default" | "danger";
+}) {
+  const toneCls =
+    tone === "danger"
+      ? "bg-destructive/20 text-destructive-foreground ring-1 ring-destructive/40"
+      : "bg-white/10 text-white";
   return (
     <button className="flex flex-col items-center gap-1">
-      <span className="grid h-10 w-10 place-items-center rounded-full bg-white/10 backdrop-blur transition-colors active:bg-white/20">
+      <span
+        className={`grid h-10 w-10 place-items-center rounded-full backdrop-blur transition-colors active:bg-white/20 ${toneCls}`}
+      >
         <Icon className="h-5 w-5" />
       </span>
       <span className="font-mono text-[10px] text-white/80">{label}</span>
