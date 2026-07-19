@@ -57,7 +57,57 @@ const reels: {
     stats: { likes: "22.1k", shares: 320 },
     hue: "from-[color:var(--cyan)]/35 via-transparent to-[color:var(--magenta)]/30",
   },
+  {
+    creator: "@raj.rust",
+    project: "Building a POSIX shell in Rust",
+    caption: "Pipes, redirects, job control — 900 lines. Reviewing my parser.",
+    stack: ["Rust", "Nix", "Unix"],
+    difficulty: "Job-Level",
+    repo: "raj-rust/rusty-sh",
+    stats: { likes: "5.2k", shares: 61 },
+    hue: "from-[color:var(--magenta)]/30 via-transparent to-[color:var(--cyan)]/30",
+  },
+  {
+    creator: "@lin.viz",
+    project: "SVG data viz from scratch, no D3",
+    caption: "Just math and coordinates. Way less magic than you'd think.",
+    stack: ["SVG", "TypeScript"],
+    difficulty: "Intermediate",
+    repo: "lin-viz/plain-charts",
+    stats: { likes: "3.1k", shares: 22 },
+    hue: "from-[color:var(--lime)]/30 via-transparent to-[color:var(--magenta)]/25",
+  },
 ];
+
+const eduAds: {
+  provider: string;
+  course: string;
+  tagline: string;
+  duration: string;
+  level: string;
+  cert: string;
+  accent: string;
+}[] = [
+  {
+    provider: "Udemy",
+    course: "Complete Python Bootcamp: From Zero to Hero",
+    tagline: "80+ hours · 1.2M learners enrolled",
+    duration: "80h",
+    level: "Beginner → Intermediate",
+    cert: "Certificate of completion",
+    accent: "var(--lime)",
+  },
+  {
+    provider: "Coursera",
+    course: "IBM Data Science Professional Certificate",
+    tagline: "10-course specialization · industry-recognized",
+    duration: "3 mo",
+    level: "Beginner",
+    cert: "Professional Certificate",
+    accent: "var(--cyan)",
+  },
+];
+
 
 const difficultyStyles: Record<Difficulty, string> = {
   Noob: "bg-[color:var(--lime)]/20 text-[color:var(--lime)] border-[color:var(--lime)]/40",
