@@ -264,3 +264,193 @@ function Sparkline() {
     </svg>
   );
 }
+
+function SubmitModal({
+  connected,
+  onClose,
+  onConnect,
+  connecting,
+}: {
+  connected: boolean;
+  onClose: () => void;
+  onConnect: () => void;
+  connecting: boolean;
+}) {
+  const [repoOpen, setRepoOpen] = useState(false);
+  const [selected, setSelected] = useState<(typeof mockRepos)[number] | null>(null);
+  const [title, setTitle] = useState("");
+  const [difficulty, setDifficulty] = useState<(typeof difficulties)[number]>("Intermediate");
+  const [submitted, setSubmitted] = useState(false);
+
+  const canSubmit = connected && selected && title.trim().length > 1;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-end justify-center bg-background/70 backdrop-blur-sm sm:items-center">
+      <div className="w-full max-w-md rounded-t-3xl border border-border/60 bg-surface p-5 pb-8 sm:rounded-3xl">
+        <div className="mb-4 flex items-start justify-between">
+          <div>
+            <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+              New submission
+            </p>
+            <h3 className="mt-1 font-display text-xl font-semibold tracking-tight">
+              Publish a project
+            </h3>
+          </div>
+          <button
+            onClick={onClose}
+            className="grid h-8 w-8 place-items-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+
+        {submitted ? (
+          <div className="rounded-2xl border border-primary/30 bg-primary/10 p-5 text-center">
+            <div className="mx-auto grid h-10 w-10 place-items-center rounded-full bg-primary text-primary-foreground">
+              <Check className="h-5 w-5" />
+            </div>
+            <p className="mt-3 font-display text-base font-semibold">Submitted for review</p>
+            <p className="mt-1 text-sm text-muted-foreground">
+              {selected?.name} · verified via GitHub OAuth
+            </p>
+            <button
+              onClick={onClose}
+              className="mt-4 inline-flex rounded-full border border-border bg-background px-4 py-2 text-xs font-semibold"
+            >
+              Done
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {/* Repo picker */}
+            <div>
+              <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+                Repository
+              </label>
+              <div className="mt-1.5">
+                {!connected ? (
+                  <button
+                    onClick={onConnect}
+                    disabled={connecting}
+                    className="flex w-full items-center justify-between gap-2 rounded-xl border border-dashed border-border bg-background/40 px-4 py-3 text-left text-sm disabled:opacity-60"
+                  >
+                    <span className="inline-flex items-center gap-2 text-muted-foreground">
+                      <Lock className="h-4 w-4" />
+                      {connecting ? "Connecting…" : "Connect GitHub to load repos"}
+                    </span>
+                    <Github className="h-4 w-4" />
+                  </button>
+                ) : (
+                  <>
+                    <button
+                      onClick={() => setRepoOpen((v) => !v)}
+                      className="flex w-full items-center justify-between gap-2 rounded-xl border border-border bg-background/60 px-4 py-3 text-left text-sm"
+                    >
+                      <span className="inline-flex items-center gap-2">
+                        <Github className="h-4 w-4" />
+                        {selected ? (
+                          <span className="font-mono">mia-dev/{selected.name}</span>
+                        ) : (
+                          <span className="text-muted-foreground">Select a repository…</span>
+                        )}
+                      </span>
+                      <ChevronDown className={"h-4 w-4 transition " + (repoOpen ? "rotate-180" : "")} />
+                    </button>
+                    {repoOpen && (
+                      <div className="mt-2 max-h-64 overflow-y-auto rounded-xl border border-border/60 bg-background/80 p-1">
+                        {mockRepos.map((r) => {
+                          const active = selected?.name === r.name;
+                          return (
+                            <button
+                              key={r.name}
+                              onClick={() => {
+                                setSelected(r);
+                                setRepoOpen(false);
+                              }}
+                              className={
+                                "flex w-full items-start justify-between gap-3 rounded-lg px-3 py-2.5 text-left transition " +
+                                (active ? "bg-primary/15" : "hover:bg-muted")
+                              }
+                            >
+                              <div className="min-w-0">
+                                <div className="flex items-center gap-2">
+                                  <span className="font-mono text-sm">{r.name}</span>
+                                  <span className="rounded-full bg-muted px-1.5 py-0.5 font-mono text-[9px] text-muted-foreground">
+                                    {r.visibility}
+                                  </span>
+                                </div>
+                                <p className="mt-0.5 truncate text-xs text-muted-foreground">
+                                  {r.desc}
+                                </p>
+                                <div className="mt-1 flex items-center gap-3 text-[10px] text-muted-foreground">
+                                  <span className="inline-flex items-center gap-1">
+                                    <Star className="h-3 w-3" /> {r.stars}
+                                  </span>
+                                  <span className="font-mono">{r.lang}</span>
+                                </div>
+                              </div>
+                              {active && <Check className="mt-1 h-4 w-4 text-primary" />}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                    <p className="mt-2 inline-flex items-center gap-1 font-mono text-[10px] text-muted-foreground">
+                      <ShieldCheck className="h-3 w-3 text-[color:var(--lime)]" />
+                      Only your OAuth-verified repos are listed. Manual URLs are disabled.
+                    </p>
+                  </>
+                )}
+              </div>
+            </div>
+
+            {/* Title */}
+            <div>
+              <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+                Project title
+              </label>
+              <input
+                value={title}
+                onChange={(e) => setTitle(e.target.value.slice(0, 80))}
+                placeholder="e.g. Realtime collab canvas"
+                className="mt-1.5 w-full rounded-xl border border-border bg-background/60 px-4 py-3 text-sm outline-none focus:border-primary"
+              />
+            </div>
+
+            {/* Difficulty */}
+            <div>
+              <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+                Difficulty
+              </label>
+              <div className="mt-1.5 grid grid-cols-3 gap-2">
+                {difficulties.map((d) => (
+                  <button
+                    key={d}
+                    onClick={() => setDifficulty(d)}
+                    className={
+                      "rounded-xl border px-2 py-2 text-xs font-semibold transition " +
+                      (difficulty === d
+                        ? "border-primary bg-primary/15 text-primary"
+                        : "border-border bg-background/40 text-muted-foreground")
+                    }
+                  >
+                    {d}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <button
+              disabled={!canSubmit}
+              onClick={() => setSubmitted(true)}
+              className="mt-2 w-full rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground disabled:opacity-40"
+            >
+              Submit project
+            </button>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
