@@ -136,11 +136,13 @@ function Learn() {
         className="h-screen snap-y snap-mandatory overflow-y-scroll"
         style={{ scrollbarWidth: "none" }}
       >
-        {reels.map((r) => (
-          <article
-            key={r.creator}
-            className="relative flex h-screen w-full snap-start items-end overflow-hidden"
-          >
+        {reels.map((r, i) => (
+          <>
+            <article
+              key={r.creator}
+              className="relative flex h-screen w-full snap-start items-end overflow-hidden"
+            >
+
             <div className={`absolute inset-0 bg-gradient-to-br ${r.hue}`} />
             <div className="absolute inset-0 grid-bg opacity-30" />
             <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-black/60" />
