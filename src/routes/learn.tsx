@@ -1,4 +1,6 @@
+import { Fragment } from "react";
 import { createFileRoute } from "@tanstack/react-router";
+
 import { Heart, Share2, Flag, Github, Music2, Play, Search, ShieldCheck, GraduationCap, BookOpen, Clock, Award } from "lucide-react";
 
 import { BottomNav } from "@/components/BottomNav";
