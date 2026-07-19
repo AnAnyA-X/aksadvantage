@@ -220,7 +220,7 @@ function Learn() {
             </div>
             </article>
             {(i + 1) % 4 === 0 && <EduBanner ad={eduAds[Math.floor(i / 4) % eduAds.length]} />}
-          </>
+          </Fragment>
         ))}
 
       </div>
