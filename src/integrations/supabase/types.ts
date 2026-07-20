@@ -133,6 +133,7 @@ export type Database = {
         }
         Returns: boolean
       }
+      report_video: { Args: { video_id: string }; Returns: undefined }
     }
     Enums: {
       app_role: "admin" | "moderator" | "creator"
