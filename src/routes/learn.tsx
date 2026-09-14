@@ -1,4 +1,4 @@
-import { Fragment } from "react";
+import { Fragment,useState} from "react";
 import { createFileRoute } from "@tanstack/react-router";
 
 import { Heart, Share2, Flag, Github, Music2, Play, Search, ShieldCheck, GraduationCap, BookOpen, Clock, Award } from "lucide-react";
@@ -118,6 +118,7 @@ const difficultyStyles: Record<Difficulty, string> = {
 };
 
 function Learn() {
+   const [likedPosts, setLikedPosts] = useState<Record<number, boolean>>({});
   return (
     <div className="min-h-screen bg-black pb-24">
       <header className="fixed inset-x-0 top-0 z-40 flex items-center justify-between px-5 pt-[max(1rem,env(safe-area-inset-top))] pb-3">
@@ -212,10 +213,21 @@ function Learn() {
                     </div>
                   </div>
                   <span className="absolute -bottom-1.5 left-1/2 grid h-4 w-4 -translate-x-1/2 place-items-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
-                    +
+                    
                   </span>
                 </div>
-                <ActionBtn icon={Heart} label={r.stats.likes} />
+                
+<ActionBtn
+  icon={Heart}
+  
+  label={r.stats.likes}
+  onClick={() => {
+    setLikedPosts((prev) => ({
+      ...prev,
+      [i]: !prev[i],
+    }));
+  }}
+/>
                 <ActionBtn icon={Share2} label={String(r.stats.shares)} />
                 <ActionBtn icon={Flag} label="Report" tone="danger" />
               </aside>
@@ -236,22 +248,34 @@ function ActionBtn({
   icon: Icon,
   label,
   tone = "default",
+  onClick,
+  liked,
 }: {
   icon: typeof Heart;
   label: string;
   tone?: "default" | "danger";
+  onClick?: () => void;
+  liked?: boolean;  
+
 }) {
   const toneCls =
     tone === "danger"
       ? "bg-destructive/20 text-destructive-foreground ring-1 ring-destructive/40"
       : "bg-white/10 text-white";
+
   return (
-    <button className="flex flex-col items-center gap-1">
+    <button
+      onClick={onClick}
+      className="flex flex-col items-center gap-1"
+    >
       <span
         className={`grid h-10 w-10 place-items-center rounded-full backdrop-blur transition-colors active:bg-white/20 ${toneCls}`}
       >
-        <Icon className="h-5 w-5" />
+       <Icon
+  className={`h-5 w-5 ${liked ? "fill-red-500 text-red-500" : ""}`}
+        />
       </span>
+
       <span className="font-mono text-[10px] text-white/80">{label}</span>
     </button>
   );
