@@ -3,7 +3,7 @@ import { useState } from "react";
 import { BottomNav } from "@/components/BottomNav";
 import { Eye, Heart, GitBranch, TrendingUp, Plus, MoreHorizontal, Play, Github, Lock, Check, ChevronDown, ShieldCheck, Star, X } from "lucide-react";
 
-export const Route = createFileRoute("/creator")({
+export const Route = createFileRoute("/_authenticated/creator")({
   head: () => ({
     meta: [
       { title: "Creator Dashboard — AdVantage" },
