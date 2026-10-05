@@ -1,9 +1,12 @@
-import { createFileRoute } from "@tanstack/react-router";
-import { useState } from "react";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/use-auth";
 import { BottomNav } from "@/components/BottomNav";
 import { Eye, Heart, GitBranch, TrendingUp, Plus, MoreHorizontal, Play, Github, Lock, Check, ChevronDown, ShieldCheck, Star, X } from "lucide-react";
 
-export const Route = createFileRoute("/creator")({
+export const Route = createFileRoute("/_authenticated/creator")({
   head: () => ({
     meta: [
       { title: "Creator Dashboard — AdVantage" },
@@ -32,16 +35,27 @@ const mockRepos = [
 const difficulties = ["Noob", "Intermediate", "Job-Level"] as const;
 
 function Creator() {
-  const [connected, setConnected] = useState(false);
-  const [connecting, setConnecting] = useState(false);
+  const { user } = useAuth();
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const [handle, setHandle] = useState<string | null>(null);
+  const connected = !!user;
+  const connecting = false;
   const [submitOpen, setSubmitOpen] = useState(false);
 
-  const handleConnect = () => {
-    setConnecting(true);
-    setTimeout(() => {
-      setConnected(true);
-      setConnecting(false);
-    }, 1100);
+  useEffect(() => {
+    if (!user) return;
+    supabase.from("users").select("github_handle").eq("id", user.id).maybeSingle()
+      .then(({ data }) => setHandle(data?.github_handle ?? null));
+  }, [user]);
+
+  const handleConnect = () => navigate({ to: "/auth" });
+
+  const handleSignOut = async () => {
+    await queryClient.cancelQueries();
+    queryClient.clear();
+    await supabase.auth.signOut();
+    navigate({ to: "/auth", replace: true });
   };
 
   return (
@@ -83,15 +97,16 @@ function Creator() {
                   <Github className="h-5 w-5" />
                 </div>
                 <div>
-                  <p className="font-display text-sm font-semibold">Connected as @mia-dev</p>
-                  <p className="font-mono text-[10px] text-muted-foreground">
-                    OAuth scope: repo:read · verified
-                  </p>
+                  <p className="font-display text-sm font-semibold">Signed in as @{handle ?? "…"}</p>
+                  <p className="font-mono text-[10px] text-muted-foreground">{user?.email}</p>
                 </div>
               </div>
-              <span className="inline-flex items-center gap-1 rounded-full bg-primary/15 px-2 py-1 font-mono text-[10px] font-medium text-primary">
-                <Check className="h-3 w-3" /> Verified
-              </span>
+              <button
+                onClick={handleSignOut}
+                className="inline-flex items-center gap-1 rounded-full bg-primary/15 px-2 py-1 font-mono text-[10px] font-medium text-primary"
+              >
+                <Check className="h-3 w-3" /> Sign out
+              </button>
             </div>
           ) : (
             <>
