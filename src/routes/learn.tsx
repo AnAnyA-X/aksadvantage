@@ -1,5 +1,7 @@
 import { Fragment,useState} from "react";
 import { createFileRoute } from "@tanstack/react-router";
+import { useQuery } from "@tanstack/react-query";
+import { fetchFeedProjects, DIFFICULTIES, type Difficulty } from "@/lib/projects";
 
 import { Heart, Share2, Flag, Github, Music2, Play, Search, ShieldCheck, GraduationCap, BookOpen, Clock, Award } from "lucide-react";
 
@@ -17,68 +19,10 @@ export const Route = createFileRoute("/learn")({
   component: Learn,
 });
 
-type Difficulty = "Noob" | "Intermediate" | "Job-Level";
-
-const reels: {
-  creator: string;
-  project: string;
-  caption: string;
-  stack: string[];
-  difficulty: Difficulty;
-  repo: string;
-  stats: { likes: string; shares: number };
-  hue: string;
-}[] = [
-  {
-    creator: "@mia.builds",
-    project: "Realtime whiteboard with Y.js",
-    caption: "Built a collaborative canvas in a weekend. CRDTs are wild.",
-    stack: ["React", "Y.js", "WebRTC", "TypeScript"],
-    difficulty: "Intermediate",
-    repo: "mia-builds/yjs-whiteboard",
-    stats: { likes: "12.4k", shares: 91 },
-    hue: "from-[color:var(--lime)]/40 via-transparent to-[color:var(--cyan)]/30",
-  },
-  {
-    creator: "@devon.codes",
-    project: "Local-first todo, no backend",
-    caption: "SQLite in the browser + service worker. Offline, forever.",
-    stack: ["SQLite", "PWA", "Vite"],
-    difficulty: "Noob",
-    repo: "devon-codes/local-todo",
-    stats: { likes: "8.9k", shares: 44 },
-    hue: "from-[color:var(--magenta)]/40 via-transparent to-[color:var(--lime)]/25",
-  },
-  {
-    creator: "@sana.ml",
-    project: "Tiny transformer in 200 lines",
-    caption: "Karpathy-style, trained on shakespeare on my M1 in an hour.",
-    stack: ["Python", "PyTorch", "CUDA"],
-    difficulty: "Job-Level",
-    repo: "sana-ml/nano-transformer",
-    stats: { likes: "22.1k", shares: 320 },
-    hue: "from-[color:var(--cyan)]/35 via-transparent to-[color:var(--magenta)]/30",
-  },
-  {
-    creator: "@raj.rust",
-    project: "Building a POSIX shell in Rust",
-    caption: "Pipes, redirects, job control — 900 lines. Reviewing my parser.",
-    stack: ["Rust", "Nix", "Unix"],
-    difficulty: "Job-Level",
-    repo: "raj-rust/rusty-sh",
-    stats: { likes: "5.2k", shares: 61 },
-    hue: "from-[color:var(--magenta)]/30 via-transparent to-[color:var(--cyan)]/30",
-  },
-  {
-    creator: "@lin.viz",
-    project: "SVG data viz from scratch, no D3",
-    caption: "Just math and coordinates. Way less magic than you'd think.",
-    stack: ["SVG", "TypeScript"],
-    difficulty: "Intermediate",
-    repo: "lin-viz/plain-charts",
-    stats: { likes: "3.1k", shares: 22 },
-    hue: "from-[color:var(--lime)]/30 via-transparent to-[color:var(--magenta)]/25",
-  },
+const hues = [
+  "from-[color:var(--lime)]/40 via-transparent to-[color:var(--cyan)]/30",
+  "from-[color:var(--magenta)]/40 via-transparent to-[color:var(--lime)]/25",
+  "from-[color:var(--cyan)]/35 via-transparent to-[color:var(--magenta)]/30",
 ];
 
 const eduAds: {
@@ -119,16 +63,39 @@ const difficultyStyles: Record<Difficulty, string> = {
 
 function Learn() {
    const [likedPosts, setLikedPosts] = useState<Record<number, boolean>>({});
+  const [filter, setFilter] = useState<Difficulty | null>(null);
+  const { data, isLoading, error } = useQuery({
+    queryKey: ["feed-projects", filter],
+    queryFn: () => fetchFeedProjects(filter),
+  });
+  const reels = (data ?? []).map((p, i) => ({
+    id: p.id,
+    creator: p.handle ? `@${p.handle}` : "@creator",
+    project: p.title,
+    caption: "",
+    stack: p.tech_stack,
+    difficulty: p.difficulty_level,
+    repoUrl: p.github_url,
+    media: p.media_url,
+    stats: { likes: "0", shares: 0 },
+    hue: hues[i % hues.length],
+  }));
   return (
     <div className="min-h-screen bg-black pb-24">
       <header className="fixed inset-x-0 top-0 z-40 flex items-center justify-between px-5 pt-[max(1rem,env(safe-area-inset-top))] pb-3">
         <div className="flex items-center gap-4 font-display text-sm">
-          <span className="text-white/50">Following</span>
-          <span className="relative text-white">
-            For You
-            <span className="absolute -bottom-1.5 left-1/2 h-0.5 w-6 -translate-x-1/2 rounded-full bg-white" />
-          </span>
-          <span className="text-white/50">Live</span>
+          {([null, ...DIFFICULTIES] as (Difficulty | null)[]).map((d) => (
+            <button
+              key={d ?? "all"}
+              onClick={() => setFilter(d)}
+              className={"relative " + (filter === d ? "text-white" : "text-white/50")}
+            >
+              {d ?? "All"}
+              {filter === d && (
+                <span className="absolute -bottom-1.5 left-1/2 h-0.5 w-6 -translate-x-1/2 rounded-full bg-white" />
+              )}
+            </button>
+          ))}
         </div>
         <button className="grid h-9 w-9 place-items-center rounded-full bg-white/10 text-white backdrop-blur">
           <Search className="h-4 w-4" />
@@ -139,8 +106,13 @@ function Learn() {
         className="h-screen snap-y snap-mandatory overflow-y-scroll"
         style={{ scrollbarWidth: "none" }}
       >
+        {(isLoading || error || reels.length === 0) && (
+          <div className="grid h-screen place-items-center px-8 text-center text-sm text-white/70">
+            {isLoading ? "Loading projects…" : error ? "Couldn't load projects." : "No projects for this level yet."}
+          </div>
+        )}
         {reels.map((r, i) => (
-          <Fragment key={r.creator}>
+          <Fragment key={r.id}>
             <article
               className="relative flex h-screen w-full snap-start items-end overflow-hidden"
             >
@@ -150,12 +122,15 @@ function Learn() {
             <div className="absolute inset-0 grid-bg opacity-30" />
             <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-black/60" />
 
-            {/* Fake "play" glyph as video placeholder */}
+            {r.media ? (
+              <video src={r.media} className="absolute inset-0 h-full w-full object-cover opacity-70" muted loop playsInline autoPlay preload="metadata" />
+            ) : (
             <div className="absolute inset-0 grid place-items-center">
               <div className="grid h-20 w-20 place-items-center rounded-full border border-white/20 bg-white/5 backdrop-blur">
                 <Play className="h-8 w-8 translate-x-0.5 text-white/80" fill="currentColor" />
               </div>
             </div>
+            )}
 
             {/* Bottom info */}
             <div className="relative z-10 flex w-full items-end justify-between gap-3 p-5 pb-24 text-white">
@@ -194,7 +169,7 @@ function Learn() {
 
                 {/* Prominent CTA */}
                 <a
-                  href={`https://github.com/${r.repo}`}
+                  href={r.repoUrl}
                   target="_blank"
                   rel="noreferrer"
                   className="mt-4 inline-flex items-center gap-2 rounded-full bg-[color:var(--lime)] px-4 py-2.5 font-display text-sm font-semibold text-[color:var(--primary-foreground)] shadow-[0_0_0_1px_rgba(255,255,255,0.15),0_10px_30px_-10px_rgba(163,255,80,0.6)] transition-transform active:scale-[0.98]"

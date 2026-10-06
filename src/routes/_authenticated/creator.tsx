@@ -3,36 +3,46 @@ import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
+import { useQuery } from "@tanstack/react-query";
+import {
+  fetchMyProjects,
+  createProject,
+  DIFFICULTIES,
+  GITHUB_URL_RE,
+  type Difficulty,
+} from "@/lib/projects";
 import { BottomNav } from "@/components/BottomNav";
-import { Eye, Heart, GitBranch, TrendingUp, Plus, MoreHorizontal, Play, Github, Lock, Check, ChevronDown, ShieldCheck, Star, X } from "lucide-react";
+import {
+  Eye,
+  Heart,
+  GitBranch,
+  TrendingUp,
+  Plus,
+  MoreHorizontal,
+  Play,
+  Github,
+  Lock,
+  Check,
+  ChevronDown,
+  ShieldCheck,
+  Star,
+  X,
+} from "lucide-react";
 
 export const Route = createFileRoute("/_authenticated/creator")({
   head: () => ({
     meta: [
       { title: "Creator Dashboard — AdVantage" },
-      { name: "description", content: "Student developers showcase projects, ship notes, and audience stats." },
+      {
+        name: "description",
+        content: "Student developers showcase projects, ship notes, and audience stats.",
+      },
       { property: "og:title", content: "Creator Dashboard — AdVantage" },
       { property: "og:description", content: "Publish your projects and grow an audience." },
     ],
   }),
   component: Creator,
 });
-
-const projects = [
-  { title: "y-canvas", status: "Live", views: "12.4k", likes: "980", stack: ["Y.js", "React", "Vite"], hue: "var(--lime)" },
-  { title: "offline-todo", status: "Live", views: "8.9k", likes: "610", stack: ["SQLite", "PWA"], hue: "var(--cyan)" },
-  { title: "mini-gpt", status: "Draft", views: "—", likes: "—", stack: ["PyTorch"], hue: "var(--magenta)" },
-];
-
-const mockRepos = [
-  { name: "y-canvas", desc: "Realtime collaborative canvas", stars: 214, lang: "TypeScript", visibility: "Public" },
-  { name: "offline-todo", desc: "Local-first PWA todo app", stars: 88, lang: "TypeScript", visibility: "Public" },
-  { name: "mini-gpt", desc: "Tiny transformer from scratch", stars: 41, lang: "Python", visibility: "Public" },
-  { name: "rusty-shell", desc: "POSIX-ish shell in Rust", stars: 17, lang: "Rust", visibility: "Private" },
-  { name: "leetcode-notes", desc: "Personal problem log", stars: 3, lang: "Markdown", visibility: "Private" },
-];
-
-const difficulties = ["Noob", "Intermediate", "Job-Level"] as const;
 
 function Creator() {
   const { user } = useAuth();
@@ -42,10 +52,29 @@ function Creator() {
   const connected = !!user;
   const connecting = false;
   const [submitOpen, setSubmitOpen] = useState(false);
+  const myProjects = useQuery({
+    queryKey: ["my-projects", user?.id],
+    queryFn: () => fetchMyProjects(user!.id),
+    enabled: !!user,
+  });
+  const hues = ["var(--lime)", "var(--cyan)", "var(--magenta)"];
+  const projects = (myProjects.data ?? []).map((p, i) => ({
+    id: p.id,
+    title: p.title,
+    status: "Live",
+    views: "—",
+    likes: "—",
+    stack: p.tech_stack,
+    hue: hues[i % 3],
+  }));
 
   useEffect(() => {
     if (!user) return;
-    supabase.from("users").select("github_handle").eq("id", user.id).maybeSingle()
+    supabase
+      .from("users")
+      .select("github_handle")
+      .eq("id", user.id)
+      .maybeSingle()
       .then(({ data }) => setHandle(data?.github_handle ?? null));
   }, [user]);
 
@@ -59,7 +88,6 @@ function Creator() {
   };
 
   return (
-
     <div className="min-h-screen pb-28">
       <div className="pointer-events-none absolute inset-x-0 top-0 h-64 bg-gradient-to-b from-[color:var(--cyan)]/15 to-transparent" />
 
@@ -68,9 +96,7 @@ function Creator() {
           <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
             Creator Dashboard
           </p>
-          <h1 className="mt-1 font-display text-2xl font-semibold tracking-tight">
-            Hey, Mia
-          </h1>
+          <h1 className="mt-1 font-display text-2xl font-semibold tracking-tight">Hey, Mia</h1>
         </div>
         <div className="h-11 w-11 rounded-full bg-gradient-to-br from-[color:var(--lime)] to-[color:var(--cyan)] p-[2px]">
           <div className="grid h-full w-full place-items-center rounded-full bg-background font-mono text-sm font-semibold">
@@ -97,7 +123,9 @@ function Creator() {
                   <Github className="h-5 w-5" />
                 </div>
                 <div>
-                  <p className="font-display text-sm font-semibold">Signed in as @{handle ?? "…"}</p>
+                  <p className="font-display text-sm font-semibold">
+                    Signed in as @{handle ?? "…"}
+                  </p>
                   <p className="font-mono text-[10px] text-muted-foreground">{user?.email}</p>
                 </div>
               </div>
@@ -114,8 +142,8 @@ function Creator() {
                 Sign in to submit projects
               </h2>
               <p className="mt-1 text-sm text-muted-foreground">
-                We authenticate creators via GitHub OAuth. URLs cannot be pasted manually —
-                only your own verified repositories can be submitted.
+                We authenticate creators via GitHub OAuth. URLs cannot be pasted manually — only
+                your own verified repositories can be submitted.
               </p>
               <button
                 onClick={handleConnect}
@@ -129,8 +157,6 @@ function Creator() {
           )}
         </div>
       </section>
-
-
 
       {/* Stats */}
       <section className="relative z-10 px-5 pt-6">
@@ -170,13 +196,21 @@ function Creator() {
           >
             <Plus className="h-3.5 w-3.5" /> New
           </button>
-
         </div>
 
         <div className="space-y-3">
+          {myProjects.isLoading && <p className="text-sm text-muted-foreground">Loading…</p>}
+          {myProjects.error && (
+            <p className="text-sm text-destructive">Couldn't load your projects.</p>
+          )}
+          {myProjects.isSuccess && projects.length === 0 && (
+            <p className="text-sm text-muted-foreground">
+              No projects yet — tap New to publish one.
+            </p>
+          )}
           {projects.map((p) => (
             <div
-              key={p.title}
+              key={p.id}
               className="group relative overflow-hidden rounded-2xl border border-border/60 bg-surface/60 p-4 backdrop-blur"
             >
               <div className="flex items-center gap-4">
@@ -211,8 +245,12 @@ function Creator() {
                     ))}
                   </div>
                   <div className="mt-2 flex items-center gap-4 text-xs text-muted-foreground">
-                    <span className="inline-flex items-center gap-1"><Eye className="h-3 w-3" /> {p.views}</span>
-                    <span className="inline-flex items-center gap-1"><Heart className="h-3 w-3" /> {p.likes}</span>
+                    <span className="inline-flex items-center gap-1">
+                      <Eye className="h-3 w-3" /> {p.views}
+                    </span>
+                    <span className="inline-flex items-center gap-1">
+                      <Heart className="h-3 w-3" /> {p.likes}
+                    </span>
                   </div>
                 </div>
                 <button className="grid h-8 w-8 place-items-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground">
@@ -239,15 +277,31 @@ function Creator() {
 
       <BottomNav />
 
-      {submitOpen && (
-        <SubmitModal connected={connected} onClose={() => setSubmitOpen(false)} onConnect={handleConnect} connecting={connecting} />
+      {submitOpen && user && (
+        <SubmitModal
+          userId={user.id}
+          onClose={() => setSubmitOpen(false)}
+          onCreated={() => {
+            queryClient.invalidateQueries({ queryKey: ["my-projects"] });
+            queryClient.invalidateQueries({ queryKey: ["feed-projects"] });
+          }}
+        />
       )}
-
     </div>
   );
 }
 
-function StatCard({ icon: Icon, label, value, delta }: { icon: typeof Eye; label: string; value: string; delta: string }) {
+function StatCard({
+  icon: Icon,
+  label,
+  value,
+  delta,
+}: {
+  icon: typeof Eye;
+  label: string;
+  value: string;
+  delta: string;
+}) {
   return (
     <div className="rounded-2xl border border-border/60 bg-surface/60 p-4 backdrop-blur">
       <div className="flex items-center justify-between">
@@ -255,16 +309,22 @@ function StatCard({ icon: Icon, label, value, delta }: { icon: typeof Eye; label
         <span className="font-mono text-[10px] text-[color:var(--lime)]">{delta}</span>
       </div>
       <p className="mt-3 font-display text-2xl font-semibold tracking-tight">{value}</p>
-      <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">{label}</p>
+      <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+        {label}
+      </p>
     </div>
   );
 }
 
 function Sparkline() {
   const pts = [8, 14, 10, 22, 18, 30, 24, 34, 28, 42, 38, 52, 48, 60];
-  const w = 300, h = 70, max = 64;
+  const w = 300,
+    h = 70,
+    max = 64;
   const step = w / (pts.length - 1);
-  const path = pts.map((y, i) => `${i === 0 ? "M" : "L"} ${i * step} ${h - (y / max) * h}`).join(" ");
+  const path = pts
+    .map((y, i) => `${i === 0 ? "M" : "L"} ${i * step} ${h - (y / max) * h}`)
+    .join(" ");
   const area = `${path} L ${w} ${h} L 0 ${h} Z`;
   return (
     <svg viewBox={`0 0 ${w} ${h}`} className="mt-4 h-20 w-full" preserveAspectRatio="none">
@@ -281,23 +341,38 @@ function Sparkline() {
 }
 
 function SubmitModal({
-  connected,
+  userId,
   onClose,
-  onConnect,
-  connecting,
+  onCreated,
 }: {
-  connected: boolean;
+  userId: string;
   onClose: () => void;
-  onConnect: () => void;
-  connecting: boolean;
+  onCreated: () => void;
 }) {
-  const [repoOpen, setRepoOpen] = useState(false);
-  const [selected, setSelected] = useState<(typeof mockRepos)[number] | null>(null);
+  const [githubUrl, setGithubUrl] = useState("");
   const [title, setTitle] = useState("");
-  const [difficulty, setDifficulty] = useState<(typeof difficulties)[number]>("Intermediate");
+  const [stack, setStack] = useState("");
+  const [difficulty, setDifficulty] = useState<Difficulty>("Intermediate");
   const [submitted, setSubmitted] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
 
-  const canSubmit = connected && selected && title.trim().length > 1;
+  const urlOk = GITHUB_URL_RE.test(githubUrl.trim());
+  const canSubmit = urlOk && title.trim().length > 1 && !saving;
+
+  const submit = async () => {
+    setSaving(true);
+    setErr(null);
+    try {
+      await createProject({ userId, title, techStack: stack.split(","), difficulty, githubUrl });
+      setSubmitted(true);
+      onCreated();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Couldn't save project.");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-background/70 backdrop-blur-sm sm:items-center">
@@ -313,6 +388,7 @@ function SubmitModal({
           </div>
           <button
             onClick={onClose}
+            aria-label="Close"
             className="grid h-8 w-8 place-items-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
           >
             <X className="h-4 w-4" />
@@ -324,10 +400,8 @@ function SubmitModal({
             <div className="mx-auto grid h-10 w-10 place-items-center rounded-full bg-primary text-primary-foreground">
               <Check className="h-5 w-5" />
             </div>
-            <p className="mt-3 font-display text-base font-semibold">Submitted for review</p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {selected?.name} · verified via GitHub OAuth
-            </p>
+            <p className="mt-3 font-display text-base font-semibold">Project published</p>
+            <p className="mt-1 text-sm text-muted-foreground">{title} is now in the Learn feed.</p>
             <button
               onClick={onClose}
               className="mt-4 inline-flex rounded-full border border-border bg-background px-4 py-2 text-xs font-semibold"
@@ -337,108 +411,52 @@ function SubmitModal({
           </div>
         ) : (
           <div className="space-y-4">
-            {/* Repo picker */}
             <div>
               <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-                Repository
+                GitHub repository
               </label>
-              <div className="mt-1.5">
-                {!connected ? (
-                  <button
-                    onClick={onConnect}
-                    disabled={connecting}
-                    className="flex w-full items-center justify-between gap-2 rounded-xl border border-dashed border-border bg-background/40 px-4 py-3 text-left text-sm disabled:opacity-60"
-                  >
-                    <span className="inline-flex items-center gap-2 text-muted-foreground">
-                      <Lock className="h-4 w-4" />
-                      {connecting ? "Connecting…" : "Connect GitHub to load repos"}
-                    </span>
-                    <Github className="h-4 w-4" />
-                  </button>
-                ) : (
-                  <>
-                    <button
-                      onClick={() => setRepoOpen((v) => !v)}
-                      className="flex w-full items-center justify-between gap-2 rounded-xl border border-border bg-background/60 px-4 py-3 text-left text-sm"
-                    >
-                      <span className="inline-flex items-center gap-2">
-                        <Github className="h-4 w-4" />
-                        {selected ? (
-                          <span className="font-mono">mia-dev/{selected.name}</span>
-                        ) : (
-                          <span className="text-muted-foreground">Select a repository…</span>
-                        )}
-                      </span>
-                      <ChevronDown className={"h-4 w-4 transition " + (repoOpen ? "rotate-180" : "")} />
-                    </button>
-                    {repoOpen && (
-                      <div className="mt-2 max-h-64 overflow-y-auto rounded-xl border border-border/60 bg-background/80 p-1">
-                        {mockRepos.map((r) => {
-                          const active = selected?.name === r.name;
-                          return (
-                            <button
-                              key={r.name}
-                              onClick={() => {
-                                setSelected(r);
-                                setRepoOpen(false);
-                              }}
-                              className={
-                                "flex w-full items-start justify-between gap-3 rounded-lg px-3 py-2.5 text-left transition " +
-                                (active ? "bg-primary/15" : "hover:bg-muted")
-                              }
-                            >
-                              <div className="min-w-0">
-                                <div className="flex items-center gap-2">
-                                  <span className="font-mono text-sm">{r.name}</span>
-                                  <span className="rounded-full bg-muted px-1.5 py-0.5 font-mono text-[9px] text-muted-foreground">
-                                    {r.visibility}
-                                  </span>
-                                </div>
-                                <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                                  {r.desc}
-                                </p>
-                                <div className="mt-1 flex items-center gap-3 text-[10px] text-muted-foreground">
-                                  <span className="inline-flex items-center gap-1">
-                                    <Star className="h-3 w-3" /> {r.stars}
-                                  </span>
-                                  <span className="font-mono">{r.lang}</span>
-                                </div>
-                              </div>
-                              {active && <Check className="mt-1 h-4 w-4 text-primary" />}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    )}
-                    <p className="mt-2 inline-flex items-center gap-1 font-mono text-[10px] text-muted-foreground">
-                      <ShieldCheck className="h-3 w-3 text-[color:var(--lime)]" />
-                      Only your OAuth-verified repos are listed. Manual URLs are disabled.
-                    </p>
-                  </>
-                )}
+              <div className="mt-1.5 flex items-center gap-2 rounded-xl border border-border bg-background/60 px-4 py-3 focus-within:border-primary">
+                <Github className="h-4 w-4 shrink-0" />
+                <input
+                  value={githubUrl}
+                  onChange={(e) => setGithubUrl(e.target.value.slice(0, 200))}
+                  placeholder="https://github.com/owner/repo"
+                  className="w-full bg-transparent font-mono text-sm outline-none"
+                />
               </div>
+              <p className="mt-2 inline-flex items-center gap-1 font-mono text-[10px] text-muted-foreground">
+                <ShieldCheck className="h-3 w-3 text-[color:var(--lime)]" />
+                Only github.com/owner/repo links are accepted.
+              </p>
             </div>
-
-            {/* Title */}
             <div>
               <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
                 Project title
               </label>
               <input
                 value={title}
-                onChange={(e) => setTitle(e.target.value.slice(0, 80))}
+                onChange={(e) => setTitle(e.target.value.slice(0, 120))}
                 placeholder="e.g. Realtime collab canvas"
                 className="mt-1.5 w-full rounded-xl border border-border bg-background/60 px-4 py-3 text-sm outline-none focus:border-primary"
               />
             </div>
-
-            {/* Difficulty */}
+            <div>
+              <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+                Tech stack (comma separated)
+              </label>
+              <input
+                value={stack}
+                onChange={(e) => setStack(e.target.value.slice(0, 200))}
+                placeholder="React, TypeScript, Supabase"
+                className="mt-1.5 w-full rounded-xl border border-border bg-background/60 px-4 py-3 text-sm outline-none focus:border-primary"
+              />
+            </div>
             <div>
               <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
                 Difficulty
               </label>
               <div className="mt-1.5 grid grid-cols-3 gap-2">
-                {difficulties.map((d) => (
+                {DIFFICULTIES.map((d) => (
                   <button
                     key={d}
                     onClick={() => setDifficulty(d)}
@@ -454,13 +472,13 @@ function SubmitModal({
                 ))}
               </div>
             </div>
-
+            {err && <p className="text-sm text-destructive">{err}</p>}
             <button
               disabled={!canSubmit}
-              onClick={() => setSubmitted(true)}
+              onClick={submit}
               className="mt-2 w-full rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground disabled:opacity-40"
             >
-              Submit project
+              {saving ? "Publishing…" : "Submit project"}
             </button>
           </div>
         )}
@@ -468,4 +486,3 @@ function SubmitModal({
     </div>
   );
 }
-
