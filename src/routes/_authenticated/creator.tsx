@@ -240,11 +240,11 @@ function Creator() {
 
       <BottomNav />
 
-      {submitOpen && (
-        {user && <SubmitModal userId={user.id} onClose={() => setSubmitOpen(false)} onCreated={() => {
+      {submitOpen && user && (
+        <SubmitModal userId={user.id} onClose={() => setSubmitOpen(false)} onCreated={() => {
           queryClient.invalidateQueries({ queryKey: ["my-projects"] });
           queryClient.invalidateQueries({ queryKey: ["feed-projects"] });
-        }} />}
+        }} />
       )}
 
     </div>
