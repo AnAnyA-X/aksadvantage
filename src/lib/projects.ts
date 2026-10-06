@@ -64,13 +64,17 @@ export async function createProject(input: {
   const title = input.title.trim();
   const url = input.githubUrl.trim();
   if (title.length < 2) throw new Error("Title must be at least 2 characters.");
-  if (!GITHUB_URL_RE.test(url)) throw new Error("Use a GitHub repo URL like https://github.com/owner/repo");
+  if (!GITHUB_URL_RE.test(url))
+    throw new Error("Use a GitHub repo URL like https://github.com/owner/repo");
   const { data, error } = await supabase
     .from("projects")
     .insert({
       user_id: input.userId,
       title,
-      tech_stack: input.techStack.map((t) => t.trim()).filter(Boolean).slice(0, 12),
+      tech_stack: input.techStack
+        .map((t) => t.trim())
+        .filter(Boolean)
+        .slice(0, 12),
       difficulty_level: input.difficulty,
       github_url: url,
     })
