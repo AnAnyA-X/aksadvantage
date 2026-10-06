@@ -3,6 +3,8 @@ import { useEffect, useState } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
+import { useQuery } from "@tanstack/react-query";
+import { fetchMyProjects, createProject, DIFFICULTIES, GITHUB_URL_RE, type Difficulty } from "@/lib/projects";
 import { BottomNav } from "@/components/BottomNav";
 import { Eye, Heart, GitBranch, TrendingUp, Plus, MoreHorizontal, Play, Github, Lock, Check, ChevronDown, ShieldCheck, Star, X } from "lucide-react";
 
@@ -18,21 +20,6 @@ export const Route = createFileRoute("/_authenticated/creator")({
   component: Creator,
 });
 
-const projects = [
-  { title: "y-canvas", status: "Live", views: "12.4k", likes: "980", stack: ["Y.js", "React", "Vite"], hue: "var(--lime)" },
-  { title: "offline-todo", status: "Live", views: "8.9k", likes: "610", stack: ["SQLite", "PWA"], hue: "var(--cyan)" },
-  { title: "mini-gpt", status: "Draft", views: "—", likes: "—", stack: ["PyTorch"], hue: "var(--magenta)" },
-];
-
-const mockRepos = [
-  { name: "y-canvas", desc: "Realtime collaborative canvas", stars: 214, lang: "TypeScript", visibility: "Public" },
-  { name: "offline-todo", desc: "Local-first PWA todo app", stars: 88, lang: "TypeScript", visibility: "Public" },
-  { name: "mini-gpt", desc: "Tiny transformer from scratch", stars: 41, lang: "Python", visibility: "Public" },
-  { name: "rusty-shell", desc: "POSIX-ish shell in Rust", stars: 17, lang: "Rust", visibility: "Private" },
-  { name: "leetcode-notes", desc: "Personal problem log", stars: 3, lang: "Markdown", visibility: "Private" },
-];
-
-const difficulties = ["Noob", "Intermediate", "Job-Level"] as const;
 
 function Creator() {
   const { user } = useAuth();
@@ -42,6 +29,15 @@ function Creator() {
   const connected = !!user;
   const connecting = false;
   const [submitOpen, setSubmitOpen] = useState(false);
+  const myProjects = useQuery({
+    queryKey: ["my-projects", user?.id],
+    queryFn: () => fetchMyProjects(user!.id),
+    enabled: !!user,
+  });
+  const hues = ["var(--lime)", "var(--cyan)", "var(--magenta)"];
+  const projects = (myProjects.data ?? []).map((p, i) => ({
+    id: p.id, title: p.title, status: "Live", views: "—", likes: "—", stack: p.tech_stack, hue: hues[i % 3],
+  }));
 
   useEffect(() => {
     if (!user) return;
@@ -174,9 +170,14 @@ function Creator() {
         </div>
 
         <div className="space-y-3">
+          {myProjects.isLoading && <p className="text-sm text-muted-foreground">Loading…</p>}
+          {myProjects.error && <p className="text-sm text-destructive">Couldn't load your projects.</p>}
+          {myProjects.isSuccess && projects.length === 0 && (
+            <p className="text-sm text-muted-foreground">No projects yet — tap New to publish one.</p>
+          )}
           {projects.map((p) => (
             <div
-              key={p.title}
+              key={p.id}
               className="group relative overflow-hidden rounded-2xl border border-border/60 bg-surface/60 p-4 backdrop-blur"
             >
               <div className="flex items-center gap-4">
@@ -240,7 +241,10 @@ function Creator() {
       <BottomNav />
 
       {submitOpen && (
-        <SubmitModal connected={connected} onClose={() => setSubmitOpen(false)} onConnect={handleConnect} connecting={connecting} />
+        {user && <SubmitModal userId={user.id} onClose={() => setSubmitOpen(false)} onCreated={() => {
+          queryClient.invalidateQueries({ queryKey: ["my-projects"] });
+          queryClient.invalidateQueries({ queryKey: ["feed-projects"] });
+        }} />}
       )}
 
     </div>
@@ -281,40 +285,48 @@ function Sparkline() {
 }
 
 function SubmitModal({
-  connected,
+  userId,
   onClose,
-  onConnect,
-  connecting,
+  onCreated,
 }: {
-  connected: boolean;
+  userId: string;
   onClose: () => void;
-  onConnect: () => void;
-  connecting: boolean;
+  onCreated: () => void;
 }) {
-  const [repoOpen, setRepoOpen] = useState(false);
-  const [selected, setSelected] = useState<(typeof mockRepos)[number] | null>(null);
+  const [githubUrl, setGithubUrl] = useState("");
   const [title, setTitle] = useState("");
-  const [difficulty, setDifficulty] = useState<(typeof difficulties)[number]>("Intermediate");
+  const [stack, setStack] = useState("");
+  const [difficulty, setDifficulty] = useState<Difficulty>("Intermediate");
   const [submitted, setSubmitted] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const [err, setErr] = useState<string | null>(null);
 
-  const canSubmit = connected && selected && title.trim().length > 1;
+  const urlOk = GITHUB_URL_RE.test(githubUrl.trim());
+  const canSubmit = urlOk && title.trim().length > 1 && !saving;
+
+  const submit = async () => {
+    setSaving(true);
+    setErr(null);
+    try {
+      await createProject({ userId, title, techStack: stack.split(","), difficulty, githubUrl });
+      setSubmitted(true);
+      onCreated();
+    } catch (e) {
+      setErr(e instanceof Error ? e.message : "Couldn't save project.");
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-background/70 backdrop-blur-sm sm:items-center">
       <div className="w-full max-w-md rounded-t-3xl border border-border/60 bg-surface p-5 pb-8 sm:rounded-3xl">
         <div className="mb-4 flex items-start justify-between">
           <div>
-            <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-              New submission
-            </p>
-            <h3 className="mt-1 font-display text-xl font-semibold tracking-tight">
-              Publish a project
-            </h3>
+            <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">New submission</p>
+            <h3 className="mt-1 font-display text-xl font-semibold tracking-tight">Publish a project</h3>
           </div>
-          <button
-            onClick={onClose}
-            className="grid h-8 w-8 place-items-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground"
-          >
+          <button onClick={onClose} aria-label="Close" className="grid h-8 w-8 place-items-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground">
             <X className="h-4 w-4" />
           </button>
         </div>
@@ -324,143 +336,50 @@ function SubmitModal({
             <div className="mx-auto grid h-10 w-10 place-items-center rounded-full bg-primary text-primary-foreground">
               <Check className="h-5 w-5" />
             </div>
-            <p className="mt-3 font-display text-base font-semibold">Submitted for review</p>
-            <p className="mt-1 text-sm text-muted-foreground">
-              {selected?.name} · verified via GitHub OAuth
-            </p>
-            <button
-              onClick={onClose}
-              className="mt-4 inline-flex rounded-full border border-border bg-background px-4 py-2 text-xs font-semibold"
-            >
-              Done
-            </button>
+            <p className="mt-3 font-display text-base font-semibold">Project published</p>
+            <p className="mt-1 text-sm text-muted-foreground">{title} is now in the Learn feed.</p>
+            <button onClick={onClose} className="mt-4 inline-flex rounded-full border border-border bg-background px-4 py-2 text-xs font-semibold">Done</button>
           </div>
         ) : (
           <div className="space-y-4">
-            {/* Repo picker */}
             <div>
-              <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-                Repository
-              </label>
-              <div className="mt-1.5">
-                {!connected ? (
-                  <button
-                    onClick={onConnect}
-                    disabled={connecting}
-                    className="flex w-full items-center justify-between gap-2 rounded-xl border border-dashed border-border bg-background/40 px-4 py-3 text-left text-sm disabled:opacity-60"
-                  >
-                    <span className="inline-flex items-center gap-2 text-muted-foreground">
-                      <Lock className="h-4 w-4" />
-                      {connecting ? "Connecting…" : "Connect GitHub to load repos"}
-                    </span>
-                    <Github className="h-4 w-4" />
-                  </button>
-                ) : (
-                  <>
-                    <button
-                      onClick={() => setRepoOpen((v) => !v)}
-                      className="flex w-full items-center justify-between gap-2 rounded-xl border border-border bg-background/60 px-4 py-3 text-left text-sm"
-                    >
-                      <span className="inline-flex items-center gap-2">
-                        <Github className="h-4 w-4" />
-                        {selected ? (
-                          <span className="font-mono">mia-dev/{selected.name}</span>
-                        ) : (
-                          <span className="text-muted-foreground">Select a repository…</span>
-                        )}
-                      </span>
-                      <ChevronDown className={"h-4 w-4 transition " + (repoOpen ? "rotate-180" : "")} />
-                    </button>
-                    {repoOpen && (
-                      <div className="mt-2 max-h-64 overflow-y-auto rounded-xl border border-border/60 bg-background/80 p-1">
-                        {mockRepos.map((r) => {
-                          const active = selected?.name === r.name;
-                          return (
-                            <button
-                              key={r.name}
-                              onClick={() => {
-                                setSelected(r);
-                                setRepoOpen(false);
-                              }}
-                              className={
-                                "flex w-full items-start justify-between gap-3 rounded-lg px-3 py-2.5 text-left transition " +
-                                (active ? "bg-primary/15" : "hover:bg-muted")
-                              }
-                            >
-                              <div className="min-w-0">
-                                <div className="flex items-center gap-2">
-                                  <span className="font-mono text-sm">{r.name}</span>
-                                  <span className="rounded-full bg-muted px-1.5 py-0.5 font-mono text-[9px] text-muted-foreground">
-                                    {r.visibility}
-                                  </span>
-                                </div>
-                                <p className="mt-0.5 truncate text-xs text-muted-foreground">
-                                  {r.desc}
-                                </p>
-                                <div className="mt-1 flex items-center gap-3 text-[10px] text-muted-foreground">
-                                  <span className="inline-flex items-center gap-1">
-                                    <Star className="h-3 w-3" /> {r.stars}
-                                  </span>
-                                  <span className="font-mono">{r.lang}</span>
-                                </div>
-                              </div>
-                              {active && <Check className="mt-1 h-4 w-4 text-primary" />}
-                            </button>
-                          );
-                        })}
-                      </div>
-                    )}
-                    <p className="mt-2 inline-flex items-center gap-1 font-mono text-[10px] text-muted-foreground">
-                      <ShieldCheck className="h-3 w-3 text-[color:var(--lime)]" />
-                      Only your OAuth-verified repos are listed. Manual URLs are disabled.
-                    </p>
-                  </>
-                )}
+              <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">GitHub repository</label>
+              <div className="mt-1.5 flex items-center gap-2 rounded-xl border border-border bg-background/60 px-4 py-3 focus-within:border-primary">
+                <Github className="h-4 w-4 shrink-0" />
+                <input value={githubUrl} onChange={(e) => setGithubUrl(e.target.value.slice(0, 200))}
+                  placeholder="https://github.com/owner/repo" className="w-full bg-transparent font-mono text-sm outline-none" />
               </div>
+              <p className="mt-2 inline-flex items-center gap-1 font-mono text-[10px] text-muted-foreground">
+                <ShieldCheck className="h-3 w-3 text-[color:var(--lime)]" />
+                Only github.com/owner/repo links are accepted.
+              </p>
             </div>
-
-            {/* Title */}
             <div>
-              <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-                Project title
-              </label>
-              <input
-                value={title}
-                onChange={(e) => setTitle(e.target.value.slice(0, 80))}
-                placeholder="e.g. Realtime collab canvas"
-                className="mt-1.5 w-full rounded-xl border border-border bg-background/60 px-4 py-3 text-sm outline-none focus:border-primary"
-              />
+              <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Project title</label>
+              <input value={title} onChange={(e) => setTitle(e.target.value.slice(0, 120))} placeholder="e.g. Realtime collab canvas"
+                className="mt-1.5 w-full rounded-xl border border-border bg-background/60 px-4 py-3 text-sm outline-none focus:border-primary" />
             </div>
-
-            {/* Difficulty */}
             <div>
-              <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-                Difficulty
-              </label>
+              <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Tech stack (comma separated)</label>
+              <input value={stack} onChange={(e) => setStack(e.target.value.slice(0, 200))} placeholder="React, TypeScript, Supabase"
+                className="mt-1.5 w-full rounded-xl border border-border bg-background/60 px-4 py-3 text-sm outline-none focus:border-primary" />
+            </div>
+            <div>
+              <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Difficulty</label>
               <div className="mt-1.5 grid grid-cols-3 gap-2">
-                {difficulties.map((d) => (
-                  <button
-                    key={d}
-                    onClick={() => setDifficulty(d)}
-                    className={
-                      "rounded-xl border px-2 py-2 text-xs font-semibold transition " +
-                      (difficulty === d
-                        ? "border-primary bg-primary/15 text-primary"
-                        : "border-border bg-background/40 text-muted-foreground")
-                    }
-                  >
+                {DIFFICULTIES.map((d) => (
+                  <button key={d} onClick={() => setDifficulty(d)}
+                    className={"rounded-xl border px-2 py-2 text-xs font-semibold transition " +
+                      (difficulty === d ? "border-primary bg-primary/15 text-primary" : "border-border bg-background/40 text-muted-foreground")}>
                     {d}
                   </button>
                 ))}
               </div>
             </div>
-
-            <button
-              disabled={!canSubmit}
-              onClick={() => setSubmitted(true)}
-              className="mt-2 w-full rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground disabled:opacity-40"
-            >
-              Submit project
+            {err && <p className="text-sm text-destructive">{err}</p>}
+            <button disabled={!canSubmit} onClick={submit}
+              className="mt-2 w-full rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground disabled:opacity-40">
+              {saving ? "Publishing…" : "Submit project"}
             </button>
           </div>
         )}
@@ -468,4 +387,3 @@ function SubmitModal({
     </div>
   );
 }
-
