@@ -83,3 +83,54 @@ export async function createProject(input: {
   if (error) throw error;
   return data;
 }
+
+
+export async function updateProject(input: {
+  projectId: string;
+  userId: string;
+  title: string;
+  techStack: string[];
+  difficulty: Difficulty;
+  githubUrl: string;
+}) {
+  const title = input.title.trim();
+  const url = input.githubUrl.trim();
+
+  if (title.length < 2) {
+    throw new Error("Title must be at least 2 characters.");
+  }
+
+  if (!GITHUB_URL_RE.test(url)) {
+    throw new Error("Use a valid GitHub repository URL.");
+  }
+
+  const { data, error } = await supabase
+    .from("projects")
+    .update({
+      title,
+      tech_stack: input.techStack
+        .map((t) => t.trim())
+        .filter(Boolean)
+        .slice(0, 12),
+      difficulty_level: input.difficulty,
+      github_url: url,
+    })
+    .eq("id", input.projectId)
+    .eq("user_id", input.userId)
+    .select("id")
+    .single();
+
+  if (error) throw error;
+
+  return data;
+}
+
+export async function deleteProject(projectId: string, userId: string) {
+  const { error } = await supabase
+    .from("projects")
+    .delete()
+    .eq("id", projectId)
+    .eq("user_id", userId);
+
+  if (error) throw error;
+}
