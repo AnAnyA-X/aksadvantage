@@ -60,6 +60,7 @@ export async function createProject(input: {
   techStack: string[];
   difficulty: Difficulty;
   githubUrl: string;
+  videoUrl?: string;
 }) {
   const title = input.title.trim();
   const url = input.githubUrl.trim();
@@ -80,9 +81,70 @@ export async function createProject(input: {
     })
     .select("id")
     .single();
-  if (error) throw error;
-  return data;
+  
+if (error) throw error;
+
+const videoUrl = input.videoUrl?.trim();
+
+if (videoUrl) {
+  const { error: videoError } = await supabase
+    .from("videos")
+    .insert({
+      project_id: data.id,
+      media_url: videoUrl,
+    });
+
+  if (videoError) throw videoError;
 }
+
+return data;
+
+}
+
+
+export async function uploadProjectVideo(
+  projectId: string,
+  file: File,
+) {
+  const MAX_SIZE = 50 * 1024 * 1024;
+
+  if (!file.type.startsWith("video/")) {
+    throw new Error("Please select a valid video file.");
+  }
+
+  if (file.size > MAX_SIZE) {
+    throw new Error("Video must be smaller than 50 MB.");
+  }
+
+  const extension = file.name.split(".").pop()?.toLowerCase() || "mp4";
+  const filePath = `${projectId}/${crypto.randomUUID()}.${extension}`;
+
+  const { error: uploadError } = await supabase.storage
+    .from("project-videos")
+    .upload(filePath, file, {
+      contentType: file.type,
+      upsert: false,
+    });
+
+  if (uploadError) throw uploadError;
+
+  const { data: urlData } = supabase.storage
+    .from("project-videos")
+    .getPublicUrl(filePath);
+
+  const { error: videoError } = await supabase
+    .from("videos")
+    .insert({
+      project_id: projectId,
+      media_url: urlData.publicUrl,
+    });
+
+  if (videoError) throw videoError;
+
+  return urlData.publicUrl;
+}
+
+
 
 
 export async function updateProject(input: {

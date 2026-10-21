@@ -503,6 +503,7 @@ function SubmitModal({
   onSaved: () => void;
 }) {
   const [githubUrl, setGithubUrl] = useState("");
+  const [videoUrl, setVideoUrl] = useState("");
   const [title, setTitle] = useState("");
   const [stack, setStack] = useState("");
   const [difficulty, setDifficulty] =
@@ -530,6 +531,7 @@ function SubmitModal({
         techStack: stack.split(","),
         difficulty,
         githubUrl,
+        videoUrl,
       });
 
       setSubmitted(true);
@@ -614,6 +616,26 @@ function SubmitModal({
               <p className="mt-2 inline-flex items-center gap-1 font-mono text-[10px] text-muted-foreground">
                 <ShieldCheck className="h-3 w-3 text-[color:var(--lime)]" />
                 Only github.com/owner/repo links are accepted.
+              </p>
+            </div>
+
+            <div>
+              <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+                Video URL (optional)
+              </label>
+
+              <input
+                type="url"
+                value={videoUrl}
+                onChange={(e) =>
+                  setVideoUrl(e.target.value.slice(0, 1000))
+                }
+                placeholder="Paste your video link here"
+                className="mt-1.5 w-full rounded-xl border border-border bg-background/60 px-4 py-3 text-sm outline-none focus:border-primary"
+              />
+
+              <p className="mt-2 font-mono text-[10px] text-muted-foreground">
+                Add a video link if available. You can leave this blank.
               </p>
             </div>
 
@@ -820,12 +842,14 @@ function EditProjectModal({
               <p className="mt-2 inline-flex items-center gap-1 font-mono text-[10px] text-muted-foreground">
                 <ShieldCheck className="h-3 w-3 text-[color:var(--lime)]" />
                 Only github.com/owner/repo links are accepted.
+             
               </p>
             </div>
 
             <div>
               <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
                 Project title
+
               </label>
 
               <input
