@@ -15,6 +15,7 @@ import { Route as AuthRouteImport } from './routes/auth'
 import { Route as EditorRouteImport } from './routes/editor'
 import { Route as LearnRouteImport } from './routes/learn'
 import { Route as AuthenticatedCreatorRouteImport } from './routes/_authenticated/creator'
+import { Route as ProjectsProjectIdRouteImport } from './routes/projects.$projectId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -45,6 +46,11 @@ const AuthenticatedCreatorRoute = AuthenticatedCreatorRouteImport.update({
   path: '/creator',
   getParentRoute: () => AuthenticatedRouteRoute,
 } as any)
+const ProjectsProjectIdRoute = ProjectsProjectIdRouteImport.update({
+  id: '/projects/$projectId',
+  path: '/projects/$projectId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -52,6 +58,7 @@ export interface FileRoutesByFullPath {
   '/editor': typeof EditorRoute
   '/learn': typeof LearnRoute
   '/creator': typeof AuthenticatedCreatorRoute
+  '/projects/$projectId': typeof ProjectsProjectIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -59,6 +66,7 @@ export interface FileRoutesByTo {
   '/editor': typeof EditorRoute
   '/learn': typeof LearnRoute
   '/creator': typeof AuthenticatedCreatorRoute
+  '/projects/$projectId': typeof ProjectsProjectIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -68,12 +76,14 @@ export interface FileRoutesById {
   '/editor': typeof EditorRoute
   '/learn': typeof LearnRoute
   '/_authenticated/creator': typeof AuthenticatedCreatorRoute
+  '/projects/$projectId': typeof ProjectsProjectIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/auth' | '/editor' | '/learn' | '/creator'
+  fullPaths:
+    '/' | '/auth' | '/editor' | '/learn' | '/creator' | '/projects/$projectId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/auth' | '/editor' | '/learn' | '/creator'
+  to: '/' | '/auth' | '/editor' | '/learn' | '/creator' | '/projects/$projectId'
   id:
     | '__root__'
     | '/'
@@ -82,6 +92,7 @@ export interface FileRouteTypes {
     | '/editor'
     | '/learn'
     | '/_authenticated/creator'
+    | '/projects/$projectId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -90,6 +101,7 @@ export interface RootRouteChildren {
   AuthRoute: typeof AuthRoute
   EditorRoute: typeof EditorRoute
   LearnRoute: typeof LearnRoute
+  ProjectsProjectIdRoute: typeof ProjectsProjectIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -136,6 +148,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof AuthenticatedCreatorRouteImport
       parentRoute: typeof AuthenticatedRouteRoute
     }
+    '/projects/$projectId': {
+      id: '/projects/$projectId'
+      path: '/projects/$projectId'
+      fullPath: '/projects/$projectId'
+      preLoaderRoute: typeof ProjectsProjectIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -156,6 +175,7 @@ const rootRouteChildren: RootRouteChildren = {
   AuthRoute: AuthRoute,
   EditorRoute: EditorRoute,
   LearnRoute: LearnRoute,
+  ProjectsProjectIdRoute: ProjectsProjectIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

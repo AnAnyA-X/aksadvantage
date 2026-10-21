@@ -6,6 +6,14 @@ export const DIFFICULTIES: Difficulty[] = ["Noob", "Intermediate", "Job-Level"];
 
 export const GITHUB_URL_RE = /^https:\/\/github\.com\/[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+\/?$/;
 
+/** Badge classes per difficulty, shared by the feed and the project page. */
+export const DIFFICULTY_STYLES: Record<Difficulty, string> = {
+  Noob: "bg-[color:var(--lime)]/20 text-[color:var(--lime)] border-[color:var(--lime)]/40",
+  Intermediate: "bg-[color:var(--cyan)]/20 text-[color:var(--cyan)] border-[color:var(--cyan)]/40",
+  "Job-Level":
+    "bg-[color:var(--magenta)]/20 text-[color:var(--magenta)] border-[color:var(--magenta)]/40",
+};
+
 export type FeedProject = {
   id: string;
   title: string;
@@ -23,6 +31,8 @@ export async function fetchFeedProjects(difficulty?: Difficulty | null): Promise
     .from("projects")
     .select("id,title,tech_stack,difficulty_level,github_url,user_id,videos(media_url)")
     .order("created_at", { ascending: false })
+    // Oldest video first, so the feed's background video is stable between loads.
+    .order("created_at", { referencedTable: "videos", ascending: true })
     .limit(50);
   if (difficulty) q = q.eq("difficulty_level", difficulty);
   const { data, error } = await q;
@@ -42,6 +52,47 @@ export async function fetchFeedProjects(difficulty?: Difficulty | null): Promise
     handle: handles.get(p.user_id) ?? null,
     media_url: (p.videos as { media_url: string }[] | null)?.[0]?.media_url ?? null,
   }));
+}
+
+export type ProjectVideo = { id: string; media_url: string; created_at: string };
+
+export type ProjectDetails = Omit<FeedProject, "media_url"> & { videos: ProjectVideo[] };
+
+/** One project with its creator's handle and all of its videos, oldest first. Null if not found. */
+export async function fetchProject(projectId: string): Promise<ProjectDetails | null> {
+  const { data, error } = await supabase
+    .from("projects")
+    .select(
+      "id,title,tech_stack,difficulty_level,github_url,user_id,videos(id,media_url,created_at)",
+    )
+    .eq("id", projectId)
+    .order("created_at", { referencedTable: "videos", ascending: true })
+    .order("id", { referencedTable: "videos", ascending: true })
+    .maybeSingle();
+  if (error) {
+    // A malformed id in the URL (not a UUID) can't match any project.
+    if (error.code === "22P02") return null;
+    throw error;
+  }
+  if (!data) return null;
+
+  const { data: owner, error: ownerError } = await supabase
+    .from("users")
+    .select("github_handle")
+    .eq("id", data.user_id)
+    .maybeSingle();
+  if (ownerError) throw ownerError;
+
+  return {
+    id: data.id,
+    title: data.title,
+    tech_stack: data.tech_stack,
+    difficulty_level: data.difficulty_level,
+    github_url: data.github_url,
+    user_id: data.user_id,
+    handle: owner?.github_handle ?? null,
+    videos: (data.videos as ProjectVideo[] | null) ?? [],
+  };
 }
 
 export async function fetchMyProjects(userId: string) {

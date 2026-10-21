@@ -1,9 +1,14 @@
 import { Fragment,useState} from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
-import { fetchFeedProjects, DIFFICULTIES, type Difficulty } from "@/lib/projects";
+import {
+  fetchFeedProjects,
+  DIFFICULTIES,
+  DIFFICULTY_STYLES,
+  type Difficulty,
+} from "@/lib/projects";
 
-import { Heart, Share2, Flag, Github, Music2, Play, Search, ShieldCheck, GraduationCap, BookOpen, Clock, Award } from "lucide-react";
+import { Heart, Share2, Flag, Github, Music2, Play, Search, ShieldCheck, GraduationCap, BookOpen, Clock, Award, X } from "lucide-react";
 
 import { BottomNav } from "@/components/BottomNav";
 
@@ -54,21 +59,29 @@ const eduAds: {
   },
 ];
 
-
-const difficultyStyles: Record<Difficulty, string> = {
-  Noob: "bg-[color:var(--lime)]/20 text-[color:var(--lime)] border-[color:var(--lime)]/40",
-  Intermediate: "bg-[color:var(--cyan)]/20 text-[color:var(--cyan)] border-[color:var(--cyan)]/40",
-  "Job-Level": "bg-[color:var(--magenta)]/20 text-[color:var(--magenta)] border-[color:var(--magenta)]/40",
-};
-
 function Learn() {
    const [likedPosts, setLikedPosts] = useState<Record<number, boolean>>({});
   const [filter, setFilter] = useState<Difficulty | null>(null);
-  const { data, isLoading, error } = useQuery({
+  const [searchOpen, setSearchOpen] = useState(false);
+  const [search, setSearch] = useState("");
+  const { data, isLoading, error, refetch, isFetching } = useQuery({
     queryKey: ["feed-projects", filter],
     queryFn: () => fetchFeedProjects(filter),
   });
-  const reels = (data ?? []).map((p, i) => ({
+  // Search narrows the projects already loaded for the selected difficulty.
+  const query = search.trim().toLowerCase();
+  const matches = (data ?? []).filter(
+    (p) =>
+      !query ||
+      p.title.toLowerCase().includes(query) ||
+      (p.handle ?? "").toLowerCase().includes(query) ||
+      p.tech_stack.some((t) => t.toLowerCase().includes(query)),
+  );
+  const closeSearch = () => {
+    setSearchOpen(false);
+    setSearch("");
+  };
+  const reels = matches.map((p, i) => ({
     id: p.id,
     creator: p.handle ? `@${p.handle}` : "@creator",
     project: p.title,
@@ -82,7 +95,7 @@ function Learn() {
   }));
   return (
     <div className="min-h-screen bg-black pb-24">
-      <header className="fixed inset-x-0 top-0 z-40 flex items-center justify-between px-5 pt-[max(1rem,env(safe-area-inset-top))] pb-3">
+      <header className="fixed inset-x-0 top-0 z-40 flex flex-wrap items-center justify-between gap-y-3 px-5 pt-[max(1rem,env(safe-area-inset-top))] pb-3">
         <div className="flex items-center gap-4 font-display text-sm">
           {([null, ...DIFFICULTIES] as (Difficulty | null)[]).map((d) => (
             <button
@@ -97,9 +110,28 @@ function Learn() {
             </button>
           ))}
         </div>
-        <button className="grid h-9 w-9 place-items-center rounded-full bg-white/10 text-white backdrop-blur">
-          <Search className="h-4 w-4" />
+        <button
+          onClick={() => (searchOpen ? closeSearch() : setSearchOpen(true))}
+          aria-label={searchOpen ? "Close search" : "Search projects"}
+          className="grid h-9 w-9 place-items-center rounded-full bg-white/10 text-white backdrop-blur"
+        >
+          {searchOpen ? <X className="h-4 w-4" /> : <Search className="h-4 w-4" />}
         </button>
+        {searchOpen && (
+          <div className="flex basis-full items-center gap-2 rounded-full bg-white/10 px-4 py-2.5 text-white backdrop-blur">
+            <Search className="h-4 w-4 shrink-0 text-white/60" />
+            <input
+              autoFocus
+              type="search"
+              value={search}
+              onChange={(e) => setSearch(e.target.value.slice(0, 100))}
+              onKeyDown={(e) => e.key === "Escape" && closeSearch()}
+              placeholder="Search projects, stacks, creators…"
+              aria-label="Search projects"
+              className="w-full bg-transparent text-sm placeholder:text-white/50 focus:outline-none"
+            />
+          </div>
+        )}
       </header>
 
       <div
@@ -108,7 +140,24 @@ function Learn() {
       >
         {(isLoading || error || reels.length === 0) && (
           <div className="grid h-screen place-items-center px-8 text-center text-sm text-white/70">
-            {isLoading ? "Loading projects…" : error ? "Couldn't load projects." : "No projects for this level yet."}
+            {isLoading ? (
+              "Loading projects…"
+            ) : error ? (
+              <div>
+                <p>Couldn't load projects.</p>
+                <button
+                  onClick={() => refetch()}
+                  disabled={isFetching}
+                  className="mt-4 rounded-full bg-white/10 px-4 py-2 text-xs font-semibold text-white backdrop-blur disabled:opacity-60"
+                >
+                  {isFetching ? "Retrying…" : "Try again"}
+                </button>
+              </div>
+            ) : query && data?.length ? (
+              `No projects match "${search.trim()}"`
+            ) : (
+              "No projects for this level yet."
+            )}
           </div>
         )}
         {reels.map((r, i) => (
@@ -132,6 +181,14 @@ function Learn() {
             </div>
             )}
 
+              {/* Tapping the card (outside its buttons and links) opens the project */}
+              <Link
+                to="/projects/$projectId"
+                params={{ projectId: r.id }}
+                aria-label={`Open ${r.project}`}
+                className="absolute inset-0"
+              />
+
             {/* Bottom info */}
             <div className="relative z-10 flex w-full items-end justify-between gap-3 p-5 pb-24 text-white">
               <div className="min-w-0 flex-1">
@@ -139,7 +196,7 @@ function Learn() {
 
                 <div className="mt-2 flex items-center gap-2">
                   <span
-                    className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 font-mono text-[10px] uppercase tracking-wide backdrop-blur ${difficultyStyles[r.difficulty]}`}
+                    className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 font-mono text-[10px] uppercase tracking-wide backdrop-blur ${DIFFICULTY_STYLES[r.difficulty]}`}
                   >
                     <span className="h-1.5 w-1.5 rounded-full bg-current" />
                     {r.difficulty}
@@ -147,14 +204,20 @@ function Learn() {
                 </div>
 
                 <h2 className="mt-2 font-display text-xl font-semibold leading-tight tracking-tight text-balance">
-                  {r.project}
+                    <Link
+                      to="/projects/$projectId"
+                      params={{ projectId: r.id }}
+                      className="hover:underline"
+                    >
+                      {r.project}
+                    </Link>
                 </h2>
                 <p className="mt-1 text-sm text-white/80">{r.caption}</p>
 
                 <div className="mt-3 flex flex-wrap gap-1.5">
-                  {r.stack.map((t) => (
+                  {r.stack.map((t, ti) => (
                     <span
-                      key={t}
+                      key={`${ti}-${t}`}
                       className="rounded-md border border-white/15 bg-white/10 px-2 py-0.5 font-mono text-[10px] text-white/90 backdrop-blur"
                     >
                       {t}
