@@ -14,6 +14,99 @@ export type Database = {
   }
   public: {
     Tables: {
+      brief_claims: {
+        Row: {
+          brief_id: string
+          created_at: string
+          editor_id: string
+          id: string
+          note: string | null
+          status: Database["public"]["Enums"]["claim_status"]
+          updated_at: string
+        }
+        Insert: {
+          brief_id: string
+          created_at?: string
+          editor_id: string
+          id?: string
+          note?: string | null
+          status?: Database["public"]["Enums"]["claim_status"]
+          updated_at?: string
+        }
+        Update: {
+          brief_id?: string
+          created_at?: string
+          editor_id?: string
+          id?: string
+          note?: string | null
+          status?: Database["public"]["Enums"]["claim_status"]
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "brief_claims_brief_id_fkey"
+            columns: ["brief_id"]
+            isOneToOne: false
+            referencedRelation: "briefs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "brief_claims_editor_id_fkey"
+            columns: ["editor_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      briefs: {
+        Row: {
+          created_at: string
+          creator_id: string
+          id: string
+          instructions: string
+          project_id: string
+          status: Database["public"]["Enums"]["brief_status"]
+          title: string
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          creator_id: string
+          id?: string
+          instructions: string
+          project_id: string
+          status?: Database["public"]["Enums"]["brief_status"]
+          title: string
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          creator_id?: string
+          id?: string
+          instructions?: string
+          project_id?: string
+          status?: Database["public"]["Enums"]["brief_status"]
+          title?: string
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "briefs_creator_id_fkey"
+            columns: ["creator_id"]
+            isOneToOne: false
+            referencedRelation: "users"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "briefs_project_id_fkey"
+            columns: ["project_id"]
+            isOneToOne: false
+            referencedRelation: "projects"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       projects: {
         Row: {
           created_at: string
@@ -138,6 +231,8 @@ export type Database = {
     }
     Enums: {
       app_role: "admin" | "moderator" | "creator"
+      brief_status: "open" | "claimed" | "delivered"
+      claim_status: "pending" | "accepted" | "declined" | "delivered"
       difficulty_level: "Noob" | "Intermediate" | "Job-Level"
     }
     CompositeTypes: {
@@ -267,6 +362,8 @@ export const Constants = {
   public: {
     Enums: {
       app_role: ["admin", "moderator", "creator"],
+      brief_status: ["open", "claimed", "delivered"],
+      claim_status: ["pending", "accepted", "declined", "delivered"],
       difficulty_level: ["Noob", "Intermediate", "Job-Level"],
     },
   },
