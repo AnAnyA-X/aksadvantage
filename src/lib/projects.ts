@@ -54,6 +54,38 @@ export async function fetchMyProjects(userId: string) {
   return data ?? [];
 }
 
+const MAX_TAGS = 12;
+const MAX_TAG_LENGTH = 30;
+
+/** Trim, cap length, drop empties and case-insensitive duplicates (first spelling wins). */
+export function normalizeTechStack(tags: string[]): string[] {
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const raw of tags) {
+    const tag = raw.trim().slice(0, MAX_TAG_LENGTH).trim();
+    const key = tag.toLowerCase();
+    if (!tag || seen.has(key)) continue;
+    seen.add(key);
+    out.push(tag);
+    if (out.length === MAX_TAGS) break;
+  }
+  return out;
+}
+
+/** Map Supabase/Postgres errors to messages a creator can act on; log the raw one. */
+function friendlyError(error: { code?: string; message?: string }, fallback: string): Error {
+  console.error(error);
+  const msg = error.message ?? "";
+  if (msg.includes("projects_github_url_format"))
+    return new Error("Use a GitHub repo URL like https://github.com/owner/repo");
+  if (msg.includes("projects_title_length"))
+    return new Error("Title must be between 2 and 120 characters.");
+  if (error.code === "22P02") return new Error("Pick a valid difficulty level.");
+  if (error.code === "42501")
+    return new Error("You don't have permission to do that. Try signing in again.");
+  return new Error(fallback);
+}
+
 export async function createProject(input: {
   userId: string;
   title: string;
@@ -71,16 +103,13 @@ export async function createProject(input: {
     .insert({
       user_id: input.userId,
       title,
-      tech_stack: input.techStack
-        .map((t) => t.trim())
-        .filter(Boolean)
-        .slice(0, 12),
+      tech_stack: normalizeTechStack(input.techStack),
       difficulty_level: input.difficulty,
       github_url: url,
     })
     .select("id")
     .single();
-  if (error) throw error;
+  if (error) throw friendlyError(error, "Couldn't publish the project. Please try again.");
   return data;
 }
 
@@ -108,29 +137,30 @@ export async function updateProject(input: {
     .from("projects")
     .update({
       title,
-      tech_stack: input.techStack
-        .map((t) => t.trim())
-        .filter(Boolean)
-        .slice(0, 12),
+      tech_stack: normalizeTechStack(input.techStack),
       difficulty_level: input.difficulty,
       github_url: url,
     })
     .eq("id", input.projectId)
     .eq("user_id", input.userId)
     .select("id")
-    .single();
+    .maybeSingle();
 
-  if (error) throw error;
+  if (error) throw friendlyError(error, "Couldn't update the project. Please try again.");
+  // RLS filters out rows the user doesn't own, so an update can silently match nothing.
+  if (!data) throw new Error("You can only edit your own projects.");
 
   return data;
 }
 
 export async function deleteProject(projectId: string, userId: string) {
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("projects")
     .delete()
     .eq("id", projectId)
-    .eq("user_id", userId);
+    .eq("user_id", userId)
+    .select("id");
 
-  if (error) throw error;
+  if (error) throw friendlyError(error, "Couldn't delete the project. Please try again.");
+  if (!data?.length) throw new Error("You can only delete your own projects.");
 }
