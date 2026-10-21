@@ -23,6 +23,7 @@ export type FeedProject = {
   user_id: string;
   handle: string | null;
   media_url: string | null;
+  video_count: number;
 };
 
 /** Public feed read (RLS: projects/videos/users are publicly readable). */
@@ -51,12 +52,15 @@ export async function fetchFeedProjects(difficulty?: Difficulty | null): Promise
     user_id: p.user_id,
     handle: handles.get(p.user_id) ?? null,
     media_url: (p.videos as { media_url: string }[] | null)?.[0]?.media_url ?? null,
+    video_count: (p.videos as unknown[] | null)?.length ?? 0,
   }));
 }
 
 export type ProjectVideo = { id: string; media_url: string; created_at: string };
 
-export type ProjectDetails = Omit<FeedProject, "media_url"> & { videos: ProjectVideo[] };
+export type ProjectDetails = Omit<FeedProject, "media_url" | "video_count"> & {
+  videos: ProjectVideo[];
+};
 
 /** One project with its creator's handle and all of its videos, oldest first. Null if not found. */
 export async function fetchProject(projectId: string): Promise<ProjectDetails | null> {
@@ -214,4 +218,72 @@ export async function deleteProject(projectId: string, userId: string) {
 
   if (error) throw friendlyError(error, "Couldn't delete the project. Please try again.");
   if (!data?.length) throw new Error("You can only delete your own projects.");
+}
+
+/** Public Storage bucket for project videos (set up manually: 50 MB, MP4/WebM/MOV, owner-only uploads). */
+const VIDEO_BUCKET = "project-videos";
+export const MAX_VIDEO_BYTES = 50 * 1024 * 1024;
+export const VIDEO_ACCEPT = "video/mp4,video/webm,video/quicktime,.mp4,.webm,.mov";
+const VIDEO_EXTENSIONS: Record<string, string> = {
+  "video/mp4": "mp4",
+  "video/webm": "webm",
+  "video/quicktime": "mov",
+};
+
+/** Browsers sometimes leave `type` empty (often for .mov); fall back to the file extension. */
+function videoContentType(file: File): string | null {
+  if (VIDEO_EXTENSIONS[file.type]) return file.type;
+  const ext = file.name.split(".").pop()?.toLowerCase();
+  const match = Object.entries(VIDEO_EXTENSIONS).find(([, e]) => e === ext);
+  return !file.type && match ? match[0] : null;
+}
+
+/** Returns a message explaining why the file can't be uploaded, or null if it's fine. */
+export function validateVideoFile(file: File): string | null {
+  if (!videoContentType(file)) return "Choose an MP4, WebM or MOV video.";
+  if (file.size === 0) return "That file is empty.";
+  if (file.size > MAX_VIDEO_BYTES) return "Videos must be 50 MB or smaller.";
+  return null;
+}
+
+/**
+ * Upload a video file to `project-videos/<projectId>/<random>.<ext>` and record it in `videos`.
+ * Storage policies and the videos RLS both only allow the project's owner.
+ */
+export async function uploadProjectVideo(projectId: string, file: File): Promise<ProjectVideo> {
+  const problem = validateVideoFile(file);
+  if (problem) throw new Error(problem);
+  const contentType = videoContentType(file)!;
+  const path = `${projectId}/${crypto.randomUUID()}.${VIDEO_EXTENSIONS[contentType]}`;
+  const bucket = supabase.storage.from(VIDEO_BUCKET);
+
+  const { error: uploadError } = await bucket.upload(path, file, { contentType, upsert: false });
+  if (uploadError) {
+    console.error(uploadError);
+    const msg = uploadError.message.toLowerCase();
+    if (msg.includes("row-level security") || msg.includes("unauthorized"))
+      throw new Error("You can only upload videos to your own projects.");
+    if (msg.includes("exceeded") || msg.includes("too large"))
+      throw new Error("Videos must be 50 MB or smaller.");
+    if (msg.includes("mime")) throw new Error("Choose an MP4, WebM or MOV video.");
+    throw new Error("Couldn't upload the video. Please try again.");
+  }
+
+  const { data: urlData } = bucket.getPublicUrl(path);
+  const { data, error } = await supabase
+    .from("videos")
+    .insert({ project_id: projectId, media_url: urlData.publicUrl })
+    .select("id,media_url,created_at")
+    .single();
+  if (error) {
+    // Don't leave an orphaned file in Storage when the row couldn't be saved.
+    const { error: cleanupError } = await bucket.remove([path]);
+    if (cleanupError) console.error("Couldn't remove orphaned upload", path, cleanupError);
+    if (error.code === "42501") {
+      console.error(error);
+      throw new Error("You can only upload videos to your own projects.");
+    }
+    throw friendlyError(error, "Couldn't save the video. Please try again.");
+  }
+  return data;
 }
