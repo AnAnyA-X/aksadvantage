@@ -44,7 +44,7 @@ Make sure you have [Node.js](https://nodejs.org/) installed on your machine.
     *(Alternatively, you can use `bun install`, `yarn install`, or `pnpm install` depending on your package manager).*
 
 3.  **Environment Variables**
-    Copy the `.env.example` (if available) to `.env` and fill in your Supabase credentials or any other required environment variables.
+    `.env` is managed by Lovable Cloud. To run locally against your own Supabase project, copy `.env.example` to `.env.local` and fill in that project's URL and publishable key. For Google sign-in, that project needs the Google provider enabled and `http://localhost:8080/auth` in Authentication → URL Configuration → Redirect URLs.
 
 ### Running the Application
 
@@ -52,7 +52,7 @@ To start the development server with Hot Module Replacement (HMR):
 ```bash
 npm run dev
 ```
-The application will typically run at `http://localhost:5173`.
+The application will typically run at `http://localhost:8080`.
 
 ### Building for Production
 

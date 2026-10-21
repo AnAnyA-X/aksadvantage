@@ -1,27 +1,14 @@
-
-import { Fragment, useState } from "react";
-import { createFileRoute } from "@tanstack/react-router";
+import { Fragment,useState} from "react";
+import { createFileRoute, Link } from "@tanstack/react-router";
 import { useQuery } from "@tanstack/react-query";
 import {
   fetchFeedProjects,
   DIFFICULTIES,
+  DIFFICULTY_STYLES,
   type Difficulty,
 } from "@/lib/projects";
 
-import {
-  Heart,
-  Share2,
-  Flag,
-  Github,
-  Music2,
-  Play,
-  Search,
-  ShieldCheck,
-  GraduationCap,
-  BookOpen,
-  Clock,
-  Award,
-} from "lucide-react";
+import { Heart, Share2, Flag, Github, Music2, Play, Search, ShieldCheck, GraduationCap, BookOpen, Clock, Award, X } from "lucide-react";
 
 import { BottomNav } from "@/components/BottomNav";
 
@@ -29,15 +16,9 @@ export const Route = createFileRoute("/learn")({
   head: () => ({
     meta: [
       { title: "Learn — AdVantage" },
-      {
-        name: "description",
-        content: "A vertical short-video feed of student tech projects.",
-      },
+      { name: "description", content: "A vertical short-video feed of student tech projects." },
       { property: "og:title", content: "Learn — AdVantage" },
-      {
-        property: "og:description",
-        content: "Swipe through 60-second builds from student developers.",
-      },
+      { property: "og:description", content: "Swipe through 60-second builds from student developers." },
     ],
   }),
   component: Learn,
@@ -78,26 +59,29 @@ const eduAds: {
   },
 ];
 
-const difficultyStyles: Record<Difficulty, string> = {
-  Noob: "bg-[color:var(--lime)]/20 text-[color:var(--lime)] border-[color:var(--lime)]/40",
-  Intermediate:
-    "bg-[color:var(--cyan)]/20 text-[color:var(--cyan)] border-[color:var(--cyan)]/40",
-  "Job-Level":
-    "bg-[color:var(--magenta)]/20 text-[color:var(--magenta)] border-[color:var(--magenta)]/40",
-};
-
 function Learn() {
-  const [likedPosts, setLikedPosts] = useState<Record<number, boolean>>({});
+   const [likedPosts, setLikedPosts] = useState<Record<number, boolean>>({});
   const [filter, setFilter] = useState<Difficulty | null>(null);
   const [searchOpen, setSearchOpen] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
-
-  const { data, isLoading, error } = useQuery({
+  const [search, setSearch] = useState("");
+  const { data, isLoading, error, refetch, isFetching } = useQuery({
     queryKey: ["feed-projects", filter],
     queryFn: () => fetchFeedProjects(filter),
   });
-
-  const reels = (data ?? []).map((p, i) => ({
+  // Search narrows the projects already loaded for the selected difficulty.
+  const query = search.trim().toLowerCase();
+  const matches = (data ?? []).filter(
+    (p) =>
+      !query ||
+      p.title.toLowerCase().includes(query) ||
+      (p.handle ?? "").toLowerCase().includes(query) ||
+      p.tech_stack.some((t) => t.toLowerCase().includes(query)),
+  );
+  const closeSearch = () => {
+    setSearchOpen(false);
+    setSearch("");
+  };
+  const reels = matches.map((p, i) => ({
     id: p.id,
     creator: p.handle ? `@${p.handle}` : "@creator",
     project: p.title,
@@ -109,119 +93,43 @@ function Learn() {
     stats: { likes: "0", shares: 0 },
     hue: hues[i % hues.length],
   }));
-
-  const query = searchTerm.trim().toLowerCase();
-
-  const visibleReels = reels.filter((r) => {
-    if (!query) return true;
-
-    return (
-      r.project.toLowerCase().includes(query) ||
-      r.stack.some((tech) => tech.toLowerCase().includes(query)) ||
-      r.creator.toLowerCase().includes(query)
-    );
-  });
-
   return (
     <div className="min-h-screen bg-black pb-24">
-      <header className="fixed inset-x-0 top-0 z-40 flex flex-col gap-3 bg-black/80 px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-3 backdrop-blur-md">
-        <div className="flex items-center gap-3">
-          {!searchOpen ? (
-            <>
-              <div className="flex min-w-0 flex-1 items-center gap-4 overflow-x-auto font-display text-sm">
-                {([null, ...DIFFICULTIES] as (Difficulty | null)[]).map(
-                  (d) => (
-                    <button
-                      key={d ?? "all"}
-                      type="button"
-                      onClick={() => setFilter(d)}
-                      className={
-                        "relative shrink-0 " +
-                        (filter === d ? "text-white" : "text-white/50")
-                      }
-                    >
-                      {d ?? "All"}
-                      {filter === d && (
-                        <span className="absolute -bottom-1.5 left-1/2 h-0.5 w-6 -translate-x-1/2 rounded-full bg-white" />
-                      )}
-                    </button>
-                  ),
-                )}
-              </div>
-
-              <button
-                type="button"
-                onClick={() => setSearchOpen(true)}
-                aria-label="Open project search"
-                className="grid h-9 w-9 shrink-0 place-items-center rounded-full bg-white/10 text-white backdrop-blur"
-              >
-                <Search className="h-4 w-4" />
-              </button>
-            </>
-          ) : (
-            <>
-              <div className="flex h-10 min-w-0 flex-1 items-center gap-2 rounded-full border border-white/20 bg-black px-3 text-white">
-                <Search className="h-4 w-4 shrink-0 text-white/50" />
-
-                <input
-                  autoFocus
-                  type="search"
-                  value={searchTerm}
-                  onChange={(e) => setSearchTerm(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === "Escape") {
-                      setSearchTerm("");
-                      setSearchOpen(false);
-                    }
-                  }}
-                  placeholder="Search projects, Java, React..."
-                  aria-label="Search projects and technologies"
-                  className="h-full w-full min-w-0 flex-1 bg-transparent text-base text-white outline-none placeholder:text-white/40"
-                />
-
-                {searchTerm && (
-                  <button
-                    type="button"
-                    onClick={() => setSearchTerm("")}
-                    aria-label="Clear search"
-                    className="shrink-0 text-lg text-white/60"
-                  >
-                    ×
-                  </button>
-                )}
-              </div>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setSearchOpen(false);
-                  setSearchTerm("");
-                }}
-                className="shrink-0 text-sm text-white/70"
-              >
-                Cancel
-              </button>
-            </>
-          )}
+      <header className="fixed inset-x-0 top-0 z-40 flex flex-wrap items-center justify-between gap-y-3 px-5 pt-[max(1rem,env(safe-area-inset-top))] pb-3">
+        <div className="flex items-center gap-4 font-display text-sm">
+          {([null, ...DIFFICULTIES] as (Difficulty | null)[]).map((d) => (
+            <button
+              key={d ?? "all"}
+              onClick={() => setFilter(d)}
+              className={"relative " + (filter === d ? "text-white" : "text-white/50")}
+            >
+              {d ?? "All"}
+              {filter === d && (
+                <span className="absolute -bottom-1.5 left-1/2 h-0.5 w-6 -translate-x-1/2 rounded-full bg-white" />
+              )}
+            </button>
+          ))}
         </div>
-
+        <button
+          onClick={() => (searchOpen ? closeSearch() : setSearchOpen(true))}
+          aria-label={searchOpen ? "Close search" : "Search projects"}
+          className="grid h-9 w-9 place-items-center rounded-full bg-white/10 text-white backdrop-blur"
+        >
+          {searchOpen ? <X className="h-4 w-4" /> : <Search className="h-4 w-4" />}
+        </button>
         {searchOpen && (
-          <div className="flex gap-2 overflow-x-auto pb-1">
-            {([null, ...DIFFICULTIES] as (Difficulty | null)[]).map((d) => (
-              <button
-                key={d ?? "all"}
-                type="button"
-                onClick={() => setFilter(d)}
-                className={
-                  "shrink-0 rounded-full border px-3 py-1.5 text-xs " +
-                  (filter === d
-                    ? "border-white bg-white text-black"
-                    : "border-white/20 bg-white/5 text-white/60")
-                }
-              >
-                {d ?? "All levels"}
-              </button>
-            ))}
+          <div className="flex basis-full items-center gap-2 rounded-full bg-white/10 px-4 py-2.5 text-white backdrop-blur">
+            <Search className="h-4 w-4 shrink-0 text-white/60" />
+            <input
+              autoFocus
+              type="search"
+              value={search}
+              onChange={(e) => setSearch(e.target.value.slice(0, 100))}
+              onKeyDown={(e) => e.key === "Escape" && closeSearch()}
+              placeholder="Search projects, stacks, creators…"
+              aria-label="Search projects"
+              className="w-full bg-transparent text-sm placeholder:text-white/50 focus:outline-none"
+            />
           </div>
         )}
       </header>
@@ -230,151 +138,143 @@ function Learn() {
         className="h-screen snap-y snap-mandatory overflow-y-scroll"
         style={{ scrollbarWidth: "none" }}
       >
-        {isLoading && (
+        {(isLoading || error || reels.length === 0) && (
           <div className="grid h-screen place-items-center px-8 text-center text-sm text-white/70">
-            Loading projects…
+            {isLoading ? (
+              "Loading projects…"
+            ) : error ? (
+              <div>
+                <p>Couldn't load projects.</p>
+                <button
+                  onClick={() => refetch()}
+                  disabled={isFetching}
+                  className="mt-4 rounded-full bg-white/10 px-4 py-2 text-xs font-semibold text-white backdrop-blur disabled:opacity-60"
+                >
+                  {isFetching ? "Retrying…" : "Try again"}
+                </button>
+              </div>
+            ) : query && data?.length ? (
+              `No projects match "${search.trim()}"`
+            ) : (
+              "No projects for this level yet."
+            )}
           </div>
         )}
+        {reels.map((r, i) => (
+          <Fragment key={r.id}>
+            <article
+              className="relative flex h-screen w-full snap-start items-end overflow-hidden"
+            >
 
-        {!isLoading && error && (
-          <div className="grid h-screen place-items-center px-8 text-center text-sm text-white/70">
-            Couldn't load projects. Please try again.
-          </div>
-        )}
 
-        {!isLoading && !error && visibleReels.length === 0 && (
-          <div className="grid h-screen place-items-center px-8 text-center text-sm text-white/70">
-            {query
-              ? "No projects match your search. Try another keyword."
-              : "No projects for this level yet."}
-          </div>
-        )}
+            <div className={`absolute inset-0 bg-gradient-to-br ${r.hue}`} />
+            <div className="absolute inset-0 grid-bg opacity-30" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-black/60" />
 
-        {!isLoading &&
-          !error &&
-          visibleReels.map((r, i) => (
-            <Fragment key={r.id}>
-              <article className="relative flex h-screen w-full snap-start items-end overflow-hidden">
-                <div
-                  className={`absolute inset-0 bg-gradient-to-br ${r.hue}`}
-                />
-                <div className="absolute inset-0 grid-bg opacity-30" />
-                <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-black/60" />
+            {r.media ? (
+              <video src={r.media} className="absolute inset-0 h-full w-full object-cover opacity-70" muted loop playsInline autoPlay preload="metadata" />
+            ) : (
+            <div className="absolute inset-0 grid place-items-center">
+              <div className="grid h-20 w-20 place-items-center rounded-full border border-white/20 bg-white/5 backdrop-blur">
+                <Play className="h-8 w-8 translate-x-0.5 text-white/80" fill="currentColor" />
+              </div>
+            </div>
+            )}
 
-                {r.media ? (
-                  <video
-                    src={r.media}
-                    className="absolute inset-0 h-full w-full object-cover opacity-70"
-                    muted
-                    loop
-                    playsInline
-                    autoPlay
-                    preload="metadata"
-                  />
-                ) : (
-                  <div className="absolute inset-0 grid place-items-center">
-                    <div className="grid h-20 w-20 place-items-center rounded-full border border-white/20 bg-white/5 backdrop-blur">
-                      <Play
-                        className="h-8 w-8 translate-x-0.5 text-white/80"
-                        fill="currentColor"
-                      />
-                    </div>
-                  </div>
-                )}
+              {/* Tapping the card (outside its buttons and links) opens the project */}
+              <Link
+                to="/projects/$projectId"
+                params={{ projectId: r.id }}
+                aria-label={`Open ${r.project}`}
+                className="absolute inset-0"
+              />
 
-                <div className="relative z-10 flex w-full items-end justify-between gap-3 p-5 pb-24 text-white">
-                  <div className="min-w-0 flex-1">
-                    <p className="font-mono text-xs text-white/70">
-                      {r.creator}
-                    </p>
+            {/* Bottom info */}
+            <div className="relative z-10 flex w-full items-end justify-between gap-3 p-5 pb-24 text-white">
+              <div className="min-w-0 flex-1">
+                <p className="font-mono text-xs text-white/70">{r.creator}</p>
 
-                    <div className="mt-2 flex items-center gap-2">
-                      <span
-                        className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 font-mono text-[10px] uppercase tracking-wide backdrop-blur ${difficultyStyles[r.difficulty]}`}
-                      >
-                        <span className="h-1.5 w-1.5 rounded-full bg-current" />
-                        {r.difficulty}
-                      </span>
-                    </div>
-
-                    <h2 className="mt-2 font-display text-xl font-semibold leading-tight tracking-tight text-balance">
-                      {r.project}
-                    </h2>
-
-                    <p className="mt-1 text-sm text-white/80">{r.caption}</p>
-
-                    <div className="mt-3 flex flex-wrap gap-1.5">
-                      {r.stack.map((t) => (
-                        <span
-                          key={t}
-                          className="rounded-md border border-white/15 bg-white/10 px-2 py-0.5 font-mono text-[10px] text-white/90 backdrop-blur"
-                        >
-                          {t}
-                        </span>
-                      ))}
-                    </div>
-
-                    <div className="mt-3 flex items-center gap-2 text-xs text-white/70">
-                      <Music2 className="h-3.5 w-3.5" />
-                      <span className="truncate">
-                        original sound — {r.creator}
-                      </span>
-                    </div>
-
-                    <a
-                      href={r.repoUrl}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="mt-4 inline-flex items-center gap-2 rounded-full bg-[color:var(--lime)] px-4 py-2.5 font-display text-sm font-semibold text-[color:var(--primary-foreground)] shadow-[0_0_0_1px_rgba(255,255,255,0.15),0_10px_30px_-10px_rgba(163,255,80,0.6)] transition-transform active:scale-[0.98]"
-                    >
-                      <Github className="h-4 w-4" />
-                      View Verified GitHub Code
-                      <ShieldCheck className="h-4 w-4 opacity-80" />
-                    </a>
-                  </div>
-
-                  <aside className="flex flex-col items-center gap-5 text-white">
-                    <div className="relative">
-                      <div className="h-11 w-11 rounded-full bg-gradient-to-br from-[color:var(--lime)] to-[color:var(--cyan)] p-[2px]">
-                        <div className="grid h-full w-full place-items-center rounded-full bg-black font-mono text-xs">
-                          {r.creator[1]?.toUpperCase() ?? "C"}
-                        </div>
-                      </div>
-
-                      <span className="absolute -bottom-1.5 left-1/2 grid h-4 w-4 -translate-x-1/2 place-items-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground" />
-                    </div>
-
-                    <ActionBtn
-                      icon={Heart}
-                      label={r.stats.likes}
-                      liked={!!likedPosts[i]}
-                      onClick={() => {
-                        setLikedPosts((prev) => ({
-                          ...prev,
-                          [i]: !prev[i],
-                        }));
-                      }}
-                    />
-
-                    <ActionBtn
-                      icon={Share2}
-                      label={String(r.stats.shares)}
-                    />
-
-                    <ActionBtn
-                      icon={Flag}
-                      label="Report"
-                      tone="danger"
-                    />
-                  </aside>
+                <div className="mt-2 flex items-center gap-2">
+                  <span
+                    className={`inline-flex items-center gap-1 rounded-full border px-2 py-0.5 font-mono text-[10px] uppercase tracking-wide backdrop-blur ${DIFFICULTY_STYLES[r.difficulty]}`}
+                  >
+                    <span className="h-1.5 w-1.5 rounded-full bg-current" />
+                    {r.difficulty}
+                  </span>
                 </div>
-              </article>
 
-              {(i + 1) % 4 === 0 && (
-                <EduBanner ad={eduAds[Math.floor(i / 4) % eduAds.length]} />
-              )}
-            </Fragment>
-          ))}
+                <h2 className="mt-2 font-display text-xl font-semibold leading-tight tracking-tight text-balance">
+                    <Link
+                      to="/projects/$projectId"
+                      params={{ projectId: r.id }}
+                      className="hover:underline"
+                    >
+                      {r.project}
+                    </Link>
+                </h2>
+                <p className="mt-1 text-sm text-white/80">{r.caption}</p>
+
+                <div className="mt-3 flex flex-wrap gap-1.5">
+                  {r.stack.map((t, ti) => (
+                    <span
+                      key={`${ti}-${t}`}
+                      className="rounded-md border border-white/15 bg-white/10 px-2 py-0.5 font-mono text-[10px] text-white/90 backdrop-blur"
+                    >
+                      {t}
+                    </span>
+                  ))}
+                </div>
+
+                <div className="mt-3 flex items-center gap-2 text-xs text-white/70">
+                  <Music2 className="h-3.5 w-3.5" />
+                  <span className="truncate">original sound — {r.creator}</span>
+                </div>
+
+                {/* Prominent CTA */}
+                <a
+                  href={r.repoUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="mt-4 inline-flex items-center gap-2 rounded-full bg-[color:var(--lime)] px-4 py-2.5 font-display text-sm font-semibold text-[color:var(--primary-foreground)] shadow-[0_0_0_1px_rgba(255,255,255,0.15),0_10px_30px_-10px_rgba(163,255,80,0.6)] transition-transform active:scale-[0.98]"
+                >
+                  <Github className="h-4 w-4" />
+                  View Verified GitHub Code
+                  <ShieldCheck className="h-4 w-4 opacity-80" />
+                </a>
+              </div>
+
+              <aside className="flex flex-col items-center gap-5 text-white">
+                <div className="relative">
+                  <div className="h-11 w-11 rounded-full bg-gradient-to-br from-[color:var(--lime)] to-[color:var(--cyan)] p-[2px]">
+                    <div className="grid h-full w-full place-items-center rounded-full bg-black font-mono text-xs">
+                      {r.creator[1].toUpperCase()}
+                    </div>
+                  </div>
+                  <span className="absolute -bottom-1.5 left-1/2 grid h-4 w-4 -translate-x-1/2 place-items-center rounded-full bg-primary text-[10px] font-bold text-primary-foreground">
+                    
+                  </span>
+                </div>
+                
+<ActionBtn
+  icon={Heart}
+  
+  label={r.stats.likes}
+  onClick={() => {
+    setLikedPosts((prev) => ({
+      ...prev,
+      [i]: !prev[i],
+    }));
+  }}
+/>
+                <ActionBtn icon={Share2} label={String(r.stats.shares)} />
+                <ActionBtn icon={Flag} label="Report" tone="danger" />
+              </aside>
+            </div>
+            </article>
+            {(i + 1) % 4 === 0 && <EduBanner ad={eduAds[Math.floor(i / 4) % eduAds.length]} />}
+          </Fragment>
+        ))}
+
       </div>
 
       <BottomNav />
@@ -393,7 +293,8 @@ function ActionBtn({
   label: string;
   tone?: "default" | "danger";
   onClick?: () => void;
-  liked?: boolean;
+  liked?: boolean;  
+
 }) {
   const toneCls =
     tone === "danger"
@@ -402,15 +303,14 @@ function ActionBtn({
 
   return (
     <button
-      type="button"
       onClick={onClick}
       className="flex flex-col items-center gap-1"
     >
       <span
         className={`grid h-10 w-10 place-items-center rounded-full backdrop-blur transition-colors active:bg-white/20 ${toneCls}`}
       >
-        <Icon
-          className={`h-5 w-5 ${liked ? "fill-red-500 text-red-500" : ""}`}
+       <Icon
+  className={`h-5 w-5 ${liked ? "fill-red-500 text-red-500" : ""}`}
         />
       </span>
 
@@ -422,6 +322,7 @@ function ActionBtn({
 function EduBanner({ ad }: { ad: (typeof eduAds)[number] }) {
   return (
     <section className="relative flex h-screen w-full snap-start items-center justify-center bg-[#faf7f0] px-5 py-10 text-neutral-900">
+      {/* Paper texture / notebook lines */}
       <div
         className="pointer-events-none absolute inset-0 opacity-[0.08]"
         style={{
@@ -429,22 +330,24 @@ function EduBanner({ ad }: { ad: (typeof eduAds)[number] }) {
             "repeating-linear-gradient(0deg, transparent 0 27px, #1a1a1a 27px 28px)",
         }}
       />
-
-      <div className="pointer-events-none absolute bottom-0 left-10 top-0 w-px bg-rose-400/40" />
+      <div className="pointer-events-none absolute left-10 top-0 bottom-0 w-px bg-rose-400/40" />
 
       <div className="relative w-full max-w-sm">
+        {/* Sponsored strip */}
         <div className="mb-4 flex items-center justify-between">
           <span className="inline-flex items-center gap-1.5 rounded-sm border border-neutral-900/20 bg-white/70 px-2 py-1 font-mono text-[10px] uppercase tracking-[0.18em] text-neutral-700 backdrop-blur">
             <BookOpen className="h-3 w-3" />
             Sponsored · Educational
           </span>
-
           <span className="font-mono text-[10px] uppercase tracking-widest text-neutral-500">
             Ad-break 01
           </span>
         </div>
 
-        <article className="relative overflow-hidden rounded-lg border-2 border-neutral-900 bg-white p-6 shadow-[8px_8px_0_0_#171717]">
+        {/* Card */}
+        <article
+          className="relative overflow-hidden rounded-lg border-2 border-neutral-900 bg-white p-6 shadow-[8px_8px_0_0_#171717]"
+        >
           <div
             className="absolute inset-x-0 top-0 h-1.5"
             style={{ background: ad.accent }}
@@ -457,23 +360,20 @@ function EduBanner({ ad }: { ad: (typeof eduAds)[number] }) {
             >
               <GraduationCap className="h-5 w-5 text-neutral-900" />
             </div>
-
             <div>
               <p className="font-mono text-[10px] uppercase tracking-widest text-neutral-500">
                 Course · {ad.provider}
               </p>
-              <p className="font-display text-sm font-semibold">
-                {ad.provider}
-              </p>
+              <p className="font-display text-sm font-semibold">{ad.provider}</p>
             </div>
           </div>
 
           <h3 className="mt-5 font-display text-2xl font-semibold leading-[1.1] tracking-tight text-neutral-900">
             {ad.course}
           </h3>
-
           <p className="mt-2 text-sm text-neutral-600">{ad.tagline}</p>
 
+          {/* Meta grid */}
           <dl className="mt-5 grid grid-cols-3 gap-2 border-y-2 border-dashed border-neutral-200 py-4">
             <MetaItem icon={Clock} label="Length" value={ad.duration} />
             <MetaItem icon={BookOpen} label="Level" value={ad.level} />
@@ -485,10 +385,7 @@ function EduBanner({ ad }: { ad: (typeof eduAds)[number] }) {
             {ad.cert}
           </p>
 
-          <button
-            type="button"
-            className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-md border-2 border-neutral-900 bg-neutral-900 px-4 py-3 font-display text-sm font-semibold text-white transition active:translate-x-[2px] active:translate-y-[2px] active:shadow-none"
-          >
+          <button className="mt-5 inline-flex w-full items-center justify-center gap-2 rounded-md border-2 border-neutral-900 bg-neutral-900 px-4 py-3 font-display text-sm font-semibold text-white transition active:translate-x-[2px] active:translate-y-[2px] active:shadow-none">
             Enroll — Continue learning
           </button>
 
@@ -505,25 +402,15 @@ function EduBanner({ ad }: { ad: (typeof eduAds)[number] }) {
   );
 }
 
-function MetaItem({
-  icon: Icon,
-  label,
-  value,
-}: {
-  icon: typeof Clock;
-  label: string;
-  value: string;
-}) {
+function MetaItem({ icon: Icon, label, value }: { icon: typeof Clock; label: string; value: string }) {
   return (
     <div>
       <div className="flex items-center gap-1 font-mono text-[9px] uppercase tracking-widest text-neutral-500">
         <Icon className="h-3 w-3" />
         {label}
       </div>
-
-      <p className="mt-1 font-display text-xs font-semibold leading-tight text-neutral-900">
-        {value}
-      </p>
+      <p className="mt-1 font-display text-xs font-semibold leading-tight text-neutral-900">{value}</p>
     </div>
   );
 }
+

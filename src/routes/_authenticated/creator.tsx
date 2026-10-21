@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/hooks/use-auth";
@@ -51,6 +51,16 @@ function Creator() {
   const [handle, setHandle] = useState<string | null>(null);
   const [submitOpen, setSubmitOpen] = useState(false);
   const [menuOpen, setMenuOpen] = useState<string | null>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!menuOpen) return;
+    const close = (e: PointerEvent) => {
+      if (!menuRef.current?.contains(e.target as Node)) setMenuOpen(null);
+    };
+    document.addEventListener("pointerdown", close);
+    return () => document.removeEventListener("pointerdown", close);
+  }, [menuOpen]);
 
   const connected = !!user;
   const connecting = false;
@@ -117,13 +127,13 @@ function Creator() {
             Creator Dashboard
           </p>
           <h1 className="mt-1 font-display text-2xl font-semibold tracking-tight">
-            Hey, Mia
+            Hey, {handle ?? "…"}
           </h1>
         </div>
 
         <div className="h-11 w-11 rounded-full bg-gradient-to-br from-[color:var(--lime)] to-[color:var(--cyan)] p-[2px]">
           <div className="grid h-full w-full place-items-center rounded-full bg-background font-mono text-sm font-semibold">
-            M
+            {(handle ?? user?.email ?? "?").charAt(0).toUpperCase()}
           </div>
         </div>
       </header>
@@ -291,7 +301,7 @@ function Creator() {
                   <div className="mt-1 flex flex-wrap items-center gap-x-1.5">
                     {p.stack.map((s, i) => (
                       <span
-                        key={s}
+                        key={`${i}-${s}`}
                         className="font-mono text-[10px] text-muted-foreground"
                       >
                         {i > 0 ? (
@@ -314,7 +324,7 @@ function Creator() {
                 </div>
 
                 {/* Project menu */}
-                <div className="relative">
+                <div className="relative" ref={menuOpen === p.id ? menuRef : undefined}>
                   <button
                     onClick={() =>
                       setMenuOpen(menuOpen === p.id ? null : p.id)
@@ -352,7 +362,11 @@ function Creator() {
                             setMenuOpen(null);
                           } catch (error) {
                             console.error(error);
-                            alert("Couldn't delete the project.");
+                            alert(
+                              error instanceof Error
+                                ? error.message
+                                : "Couldn't delete the project."
+                            );
                           }
                         }}
                         className="w-full rounded-lg px-3 py-2 text-left text-sm text-destructive hover:bg-muted"
@@ -503,7 +517,6 @@ function SubmitModal({
   onSaved: () => void;
 }) {
   const [githubUrl, setGithubUrl] = useState("");
-  const [videoUrl, setVideoUrl] = useState("");
   const [title, setTitle] = useState("");
   const [stack, setStack] = useState("");
   const [difficulty, setDifficulty] =
@@ -531,7 +544,6 @@ function SubmitModal({
         techStack: stack.split(","),
         difficulty,
         githubUrl,
-        videoUrl,
       });
 
       setSubmitted(true);
@@ -616,26 +628,6 @@ function SubmitModal({
               <p className="mt-2 inline-flex items-center gap-1 font-mono text-[10px] text-muted-foreground">
                 <ShieldCheck className="h-3 w-3 text-[color:var(--lime)]" />
                 Only github.com/owner/repo links are accepted.
-              </p>
-            </div>
-
-            <div>
-              <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-                Video URL (optional)
-              </label>
-
-              <input
-                type="url"
-                value={videoUrl}
-                onChange={(e) =>
-                  setVideoUrl(e.target.value.slice(0, 1000))
-                }
-                placeholder="Paste your video link here"
-                className="mt-1.5 w-full rounded-xl border border-border bg-background/60 px-4 py-3 text-sm outline-none focus:border-primary"
-              />
-
-              <p className="mt-2 font-mono text-[10px] text-muted-foreground">
-                Add a video link if available. You can leave this blank.
               </p>
             </div>
 
@@ -842,14 +834,12 @@ function EditProjectModal({
               <p className="mt-2 inline-flex items-center gap-1 font-mono text-[10px] text-muted-foreground">
                 <ShieldCheck className="h-3 w-3 text-[color:var(--lime)]" />
                 Only github.com/owner/repo links are accepted.
-             
               </p>
             </div>
 
             <div>
               <label className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
                 Project title
-
               </label>
 
               <input

@@ -63,7 +63,6 @@ const projectId = env.LOVABLE_PROJECT_ID ?? "";
 const projectEnv = env.LOVABLE_PROJECT_ENV ?? "";
 
 export default defineConfig({
-  
   plugins: projectId
     ? [lovableOAuthShim(projectId, projectEnv)]
     : [],
@@ -72,4 +71,3 @@ export default defineConfig({
     server: { entry: "server" },
   },
 });
-
